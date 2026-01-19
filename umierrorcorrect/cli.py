@@ -365,6 +365,139 @@ def fit_model(
     logger.info("Model fitting complete!")
 
 
+@app.command()
+def batch(
+    input_dir: Annotated[
+        Optional[Path], typer.Option("-i", "--input-dir", help="Directory containing FASTQ files to process.")
+    ] = None,
+    sample_sheet: Annotated[
+        Optional[Path],
+        typer.Option("--sample-sheet", help="CSV/TSV sample sheet with sample_name,read1,read2 columns."),
+    ] = None,
+    reference: Annotated[Path, typer.Option("-r", "--reference", help="Path to reference genome FASTA.")] = ...,
+    output_dir: Annotated[Path, typer.Option("-o", "--output-dir", help="Output directory for all samples.")] = ...,
+    bed_file: Annotated[
+        Optional[Path], typer.Option("-bed", "--bed-file", help="Path to BED file defining targeted regions.")
+    ] = None,
+    umi_length: Annotated[int, typer.Option("-ul", "--umi-length", help="Length of UMI sequence.")] = 12,
+    spacer_length: Annotated[
+        int, typer.Option("-sl", "--spacer-length", help="Length of spacer between UMI and read.")
+    ] = 0,
+    threads: Annotated[int, typer.Option("-t", "--threads", help="Total number of threads to use.")] = 8,
+    samples_parallel: Annotated[
+        int, typer.Option("-j", "--jobs", help="Number of samples to process in parallel.")
+    ] = 2,
+    prefilter: Annotated[Optional[str], typer.Option("--prefilter", help="Pre-filtering tool to use (fastp).")] = None,
+    merge_reads: Annotated[
+        bool, typer.Option("--merge-reads", help="Merge overlapping reads with fastp (paired-end only).")
+    ] = False,
+    phred_score: Annotated[
+        int, typer.Option("-q", "--phred-score", help="Minimum Phred quality score for fastp filtering.")
+    ] = 20,
+    qc: Annotated[bool, typer.Option("--qc", help="Generate FastQC and MultiQC reports.")] = False,
+    edit_distance: Annotated[
+        int, typer.Option("-d", "--edit-distance", help="Edit distance threshold for UMI clustering.")
+    ] = 1,
+    dual_index: Annotated[bool, typer.Option("--dual-index", help="Use dual indices (UMIs on R1 and R2).")] = False,
+    reverse_index: Annotated[bool, typer.Option("--reverse-index", help="UMI is on R2 instead of R1.")] = False,
+) -> None:
+    """Process multiple samples in batch.
+
+    Discovers FASTQ pairs in a directory or reads from a sample sheet,
+    then processes each sample through the UMI Error Correct pipeline in parallel.
+
+    Examples:
+
+        # Process all FASTQ files in a directory
+        umierrorcorrect batch -i /path/to/fastqs -r genome.fa -o results/ -ul 12
+
+        # With sample sheet
+        umierrorcorrect batch --sample-sheet samples.csv -r genome.fa -o results/
+
+        # With pre-filtering and QC
+        umierrorcorrect batch -i /path/to/fastqs -r genome.fa -o results/ --prefilter fastp --qc -t 16
+    """
+    from umierrorcorrect.batch import batch_process, discover_samples, parse_sample_sheet
+
+    # Validate input options
+    if input_dir is None and sample_sheet is None:
+        console.print("[red]Error:[/red] Either --input-dir or --sample-sheet must be provided.")
+        raise typer.Exit(1)
+
+    if input_dir is not None and sample_sheet is not None:
+        console.print("[red]Error:[/red] Cannot use both --input-dir and --sample-sheet. Choose one.")
+        raise typer.Exit(1)
+
+    # Discover or parse samples
+    if sample_sheet is not None:
+        if not sample_sheet.exists():
+            console.print(f"[red]Error:[/red] Sample sheet not found: {sample_sheet}")
+            raise typer.Exit(1)
+        try:
+            samples = parse_sample_sheet(sample_sheet)
+        except ValueError as e:
+            console.print(f"[red]Error parsing sample sheet:[/red] {e}")
+            raise typer.Exit(1) from None
+    else:
+        if not input_dir.exists():
+            console.print(f"[red]Error:[/red] Input directory not found: {input_dir}")
+            raise typer.Exit(1)
+        samples = discover_samples(input_dir)
+
+    if not samples:
+        console.print("[red]Error:[/red] No samples found.")
+        raise typer.Exit(1)
+
+    # Validate reference
+    if not reference.exists():
+        console.print(f"[red]Error:[/red] Reference file not found: {reference}")
+        raise typer.Exit(1)
+
+    # Validate prefilter option
+    if prefilter and prefilter.lower() not in ("fastp",):
+        console.print(f"[red]Error:[/red] Unknown prefilter tool: {prefilter}. Supported: fastp")
+        raise typer.Exit(1)
+
+    console.print("[bold green]UMI Error Correct - Batch Processing[/bold green]")
+    console.print(f"  Samples found: {len(samples)}")
+    console.print(f"  Reference: {reference}")
+    console.print(f"  Output: {output_dir}")
+    console.print(f"  Threads: {threads} ({samples_parallel} samples in parallel)")
+    if prefilter:
+        console.print(f"  Pre-filter: {prefilter}")
+    if qc:
+        console.print("  QC reports: enabled")
+    console.print()
+
+    logger.info(f"Starting batch processing of {len(samples)} samples")
+
+    results = batch_process(
+        samples=samples,
+        reference=reference,
+        output_dir=output_dir,
+        bed_file=bed_file,
+        umi_length=umi_length,
+        spacer_length=spacer_length,
+        threads=threads,
+        samples_parallel=samples_parallel,
+        edit_distance=edit_distance,
+        dual_index=dual_index,
+        reverse_index=reverse_index,
+        prefilter=prefilter,
+        merge_reads=merge_reads,
+        phred_score=phred_score,
+        run_qc=qc,
+    )
+
+    # Exit with non-zero code if any sample failed
+    failed_count = sum(1 for r in results if not r.success)
+    if failed_count > 0:
+        logger.warning(f"{failed_count} sample(s) failed to process")
+        raise typer.Exit(1)
+
+    logger.info("Batch processing complete!")
+
+
 def main_cli() -> None:
     """Entry point for the CLI."""
     app()
