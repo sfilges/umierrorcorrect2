@@ -1,88 +1,104 @@
-# umierrorcorrect
+# UMIErrorCorrect
 
-Pipeline for analyzing barcoded amplicon sequencing data with Unique molecular identifiers (UMI)
+Pipeline for analyzing barcoded amplicon sequencing data with Unique Molecular Identifiers (UMI).
 
+## Reference
 
-Reference
----------
+UMIErrorCorrect has been published in Clinical Chemistry:
 
-UMIErrorCorrect has been published in Clinical Chemistry.
+> Osterlund T., Filges S., Johansson G., Stahlberg A. *UMIErrorCorrect and UMIAnalyzer: Software for Consensus Read Generation, Error Correction, and Visualization Using Unique Molecular Identifiers*, Clinical Chemistry, 2022, hvac136
 
-[Link to the Umierrorcorrect paper](https://doi.org/10.1093/clinchem/hvac136)
+[Link to the paper](https://doi.org/10.1093/clinchem/hvac136)
 
-Osterlund T., Filges S., Johansson G., Stahlberg A. UMIErrorCorrect and UMIAnalyzer: Software for Consensus Read Generation, Error Correction, and Visualization Using Unique Molecular Identifiers, Clinical Chemistry, 2022;, hvac136
+## Installation
 
-Installation
-------------
+### Using pip
 
-To run Umierrorcorrect via Docker, see the [Docker documentation](doc/docker.md).
-
-To install the UMI-errorcorrect pipeline from source, open a terminal and type the following:
-
-```
+```bash
 pip install umierrorcorrect
 ```
-    
-After installation, try to run the pipeline:
 
+### Using uv (recommended)
+
+```bash
+uv pip install umierrorcorrect
 ```
-run_umierrorcorrect.py -h
+
+### Using Docker
+
+```bash
+docker pull ghcr.io/sfilges/umierrorcorrect:latest
+# Or build locally
+docker build -t umierrorcorrect docker/
 ```
 
-Dependencies
-------------
+See the [Docker documentation](doc/docker.md) for more details.
 
-Umi-errorcorrect runs using Python 3 and requires the following programs/libraries to be installed (if you run through docker all dependencies are already handled):
+### Verify installation
 
-Python-libraries (should be installed automatically):
-
-    pysam (v 0.8.4 or greater)
-
-External programs:
-
-    bwa (bwa mem command is used)
-    Either of gzip or pigz (parallel gzip)
-
-Install the external programs and add them to the path.
-
-Since the umierrorcorrect pipeline is using `bwa` for mapping of reads, a bwa-indexed reference genome is needed. Index the reference genome with the command `bwa index -a bwtsw reference.fa`.
-
-Usage
------
-
-Example syntax for running the whole pipeline:
-
-    run_umierrorcorrect.py -r1 read1.fastq.gz -r2 read2.fastq.gz -ul umi_length -sl spacer_length -r reference_fasta_file.fasta -o output_directory
-
-The ``run_umierrorcorrect.py`` pipeline performs the following steps:
-
-- Preprocessing of fastq files (remove the UMI and spacer and puts the UMI in the header)
-- Mapping of preprocessed fastq reads to the reference genome
-- Perform UMI clustering, then error correcion of each UMI cluster
-- Create consensus reads (one representative read per UMI cluster written to a BAM file)
-- Create a consensus output file (collapsed counts per position)
-- Perform variant calling.
-
-It is also to possible to run the pipeline step-by-step.
-
-To see the options for each step, type the following:
-
+```bash
+run_umierrorcorrect --help
 ```
-preprocess.py -h
-run_mapping.py -h
-umi_error_correct.py -h
-get_consensus_statistics.py -h
-call_variants.py -h
-filter_bam.py -h
-filter_cons.py -h
+
+## Dependencies
+
+UMIErrorCorrect requires Python 3.8+ and the following:
+
+**Python libraries** (installed automatically):
+
+- pysam (≥0.8.4)
+- scipy
+- matplotlib
+
+**External programs** (must be in PATH):
+
+- `bwa` - for read mapping
+- `gzip` or `pigz` - for compression
+
+### Reference genome setup
+
+The pipeline uses `bwa` for mapping, so you need an indexed reference genome:
+
+```bash
+bwa index -a bwtsw reference.fa
 ```
-Tutorial
---------
 
-[Link to the Umierrorcorrect tutorial](https://github.com/stahlberggroup/umierrorcorrect/wiki/Tutorial)
+## Usage
 
+### Full pipeline
 
-Example of UMI definition options
-----------------------------------
+```bash
+run_umierrorcorrect -r1 read1.fastq.gz -r2 read2.fastq.gz \
+    -ul <umi_length> -sl <spacer_length> \
+    -r reference.fa -o output_directory
+```
 
-[UMI definition options](https://github.com/stahlberggroup/umierrorcorrect/wiki/UMI-definition-options)
+### Pipeline steps
+
+The `run_umierrorcorrect` command performs:
+
+1. **Preprocessing** - Extract UMI from reads and add to header
+2. **Mapping** - Align reads to reference genome with BWA
+3. **UMI clustering** - Group reads by UMI similarity
+4. **Error correction** - Generate consensus for each UMI cluster
+5. **Statistics** - Create consensus output file with per-position counts
+6. **Variant calling** - Call variants from consensus data
+
+### Running individual steps
+
+Each step can be run independently:
+
+```bash
+preprocess --help
+run_mapping --help
+umi_error_correct --help
+get_consensus_statistics --help
+call_variants --help
+filter_bam --help
+filter_cons --help
+```
+
+## Documentation
+
+- [Tutorial](https://github.com/stahlberggroup/umierrorcorrect/wiki/Tutorial)
+- [UMI definition options](https://github.com/stahlberggroup/umierrorcorrect/wiki/UMI-definition-options)
