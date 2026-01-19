@@ -3,6 +3,7 @@ import argparse
 import glob
 import logging
 import sys
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -204,8 +205,8 @@ def run_call_variants(args):
     else:
         rout = data[a1 >= float(args.count_cutoff)]
         Qsig = Q[a1 >= float(args.count_cutoff)]
-    outfilename = args.output_path + "/" + args.sample_name + ".vcf"
-    write_vcf(outfilename, rout, Qsig, args.reference_file)
+    outfilename = Path(args.output_path) / f"{args.sample_name}.vcf"
+    write_vcf(str(outfilename), rout, Qsig, args.reference_file)
 
 
 def main(filename, fsize, cutoff):

@@ -14,6 +14,7 @@ Run the pipeline
 import argparse
 import logging
 import sys
+from pathlib import Path
 
 from umierrorcorrect.call_variants import run_call_variants
 from umierrorcorrect.get_consensus_statistics import run_get_consensus_statistics
@@ -61,7 +62,7 @@ def parseArgs():
         "--remove_large_files",
         dest="remove_large_files",
         action="store_true",
-        help="Include this flag to emove the original Fastq and BAM files (reads without error correction).",
+        help="Include this flag to remove the original Fastq and BAM files (reads without error correction).",
     )
     group1.add_argument(
         "-trim",
@@ -248,7 +249,7 @@ def main(args):
     check_bwa_index(args.reference_file)
     # args=check_args_bam(args)
     fastq_files, nseqs = run_preprocessing(args)  # run preprocessing
-    logging.info("Files: {}, number of reads: {}".format(" ".join(fastq_files), nseqs))
+    logging.info(f"Files: {' '.join(fastq_files)}, number of reads: {nseqs}")
     bam_file = run_mapping(
         args.num_threads, args.reference_file, fastq_files, args.output_path, args.sample_name, args.remove_large_files
     )  # run mapping
@@ -256,8 +257,9 @@ def main(args):
     # print(args.bam_file)
     args.regions_from_tag = False
     run_umi_errorcorrect(args)  # run umi errorcorrect
-    cons_bam = args.output_path + "/" + args.sample_name + "_consensus_reads.bam"
-    stat_filename = args.output_path + "/" + args.sample_name + ".hist"
+    output_path = Path(args.output_path)
+    cons_bam = str(output_path / f"{args.sample_name}_consensus_reads.bam")
+    stat_filename = str(output_path / f"{args.sample_name}.hist")
     run_get_consensus_statistics(args.output_path, cons_bam, stat_filename, False, args.sample_name)
     args.cons_file = None
     # args.params_file=None

@@ -5,6 +5,7 @@ import logging
 import random
 import sys
 from collections import Counter
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -291,32 +292,33 @@ def get_percent_mapped_reads(num_fastq_reads, bamfile):
 
 def run_get_consensus_statistics(output_path, consensus_filename, stat_filename, output_raw, samplename):
     logging.info("Getting consensus statistics")
+    out_path = Path(output_path)
     if not consensus_filename:
-        consensus_filename = glob.glob(output_path + "/*_consensus_reads.bam")[0]
+        consensus_filename = glob.glob(str(out_path / "*_consensus_reads.bam"))[0]
     if not samplename:
-        samplename = consensus_filename.split("/")[-1].replace("_consensus_reads.bam", "")
+        samplename = Path(consensus_filename).name.replace("_consensus_reads.bam", "")
     if not stat_filename:
-        stat_filename = output_path + "/" + samplename + ".hist"
+        stat_filename = str(out_path / f"{samplename}.hist")
     hist = get_stat(consensus_filename, stat_filename)
     fsizes = [1, 2, 3, 4, 5, 7, 10, 20, 30]
     histall = get_overall_statistics(hist, fsizes)
     if not consensus_filename:
-        consensus_filename = glob.glob(output_path + "/*_consensus_reads.bam")
+        consensus_filename = glob.glob(str(out_path / "*_consensus_reads.bam"))
         # print(consensus_filename)
     if not samplename:
-        samplename = stat_filename.split("/")[-1][:-5]
-    outfilename = output_path + "/" + samplename + "_summary_statistics.txt"
-    logging.info("Writing consensus statistics to " + outfilename)
+        samplename = Path(stat_filename).stem
+    outfilename = out_path / f"{samplename}_summary_statistics.txt"
+    logging.info(f"Writing consensus statistics to {outfilename}")
     with open(outfilename, "w") as g:
         g.write(histall.write_stats() + "\n")
         for stat in hist:
             g.write(stat.write_stats() + "\n")
-    outfilename = output_path + "/" + samplename + "_target_coverage.txt"
+    outfilename = out_path / f"{samplename}_target_coverage.txt"
     with open(outfilename, "w") as g:
         g.write(calculate_target_coverage(hist, fsizes))
     if output_raw:
         largehist = []
-        outfilename = output_path + "/" + samplename + "_consensus_group_counts.txt"
+        outfilename = out_path / f"{samplename}_consensus_group_counts.txt"
         for h in hist:
             largehist = largehist + h.hist
             largehist = largehist + [1] * h.singletons

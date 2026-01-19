@@ -12,27 +12,34 @@ from math import log10
 
 import pysam
 
+from umierrorcorrect.src.constants import (
+    COVERAGE_THRESHOLD_FOR_SIMPLE_CONSENSUS,
+    DEFAULT_MAPPING_QUALITY,
+    MAX_PHRED_SCORE,
+    PHRED_TABLE_SIZE,
+    READ_GROUP_TAG,
+)
 from umierrorcorrect.src.group import readBam
 from umierrorcorrect.src.umi_cluster import cluster_barcodes, get_connected_components, merge_clusters
 
 # Pre-computed lookup tables for phred score conversions (avoid repeated 10**x calculations)
 # Phred scores typically range from 0-93 (ASCII 33-126)
-_PHRED_TO_PROB = tuple(1.0 - (10.0 ** (-q / 10.0)) for q in range(94))
-_PHRED_TO_ERROR = tuple(10.0 ** (-q / 10.0) for q in range(94))
+_PHRED_TO_PROB = tuple(1.0 - (10.0 ** (-q / 10.0)) for q in range(PHRED_TABLE_SIZE))
+_PHRED_TO_ERROR = tuple(10.0 ** (-q / 10.0) for q in range(PHRED_TABLE_SIZE))
 
 
 def _phred_to_prob(phred: int) -> float:
     """Convert phred score to probability of correctness using lookup table."""
-    if phred < 94:
+    if phred < PHRED_TABLE_SIZE:
         return _PHRED_TO_PROB[phred]
-    return _PHRED_TO_PROB[93]  # Cap at max
+    return _PHRED_TO_PROB[PHRED_TABLE_SIZE - 1]  # Cap at max
 
 
 def _phred_to_error(phred: int) -> float:
     """Convert phred score to error probability using lookup table."""
-    if phred < 94:
+    if phred < PHRED_TABLE_SIZE:
         return _PHRED_TO_ERROR[phred]
-    return _PHRED_TO_ERROR[93]  # Cap at max
+    return _PHRED_TO_ERROR[PHRED_TABLE_SIZE - 1]  # Cap at max
 
 
 class consensus_read:
@@ -114,10 +121,10 @@ class consensus_read:
             a.flag = 0
             a.reference_id = f.references.index(self.contig)
             a.reference_start = self.start_pos
-            a.mapping_quality = 60
+            a.mapping_quality = DEFAULT_MAPPING_QUALITY
             a.cigar = self.get_cigar()
             a.query_qualities = pysam.qualitystring_to_array(self.qual)
-            a.tags = (("NM", self.nmtag), ("RG", "L1"))
+            a.tags = (("NM", self.nmtag), ("RG", READ_GROUP_TAG))
             f.write(a)
         else:
             j = 0
@@ -138,13 +145,13 @@ class consensus_read:
                     j += 1
                     a.flag = 0
                     a.reference_id = f.references.index(self.contig)
-                    a.mapping_quality = 60
+                    a.mapping_quality = DEFAULT_MAPPING_QUALITY
                     endc = end + self.cigarstring[start:end].count("2")  # add 1 for each deletion
                     groups = groupby(self.cigarstring[start:endc])
                     cigar = tuple((int(label), sum(1 for _ in group)) for label, group in groups)
                     a.cigar = cigar
                     a.query_qualities = pysam.qualitystring_to_array(self.qual)[start:end]
-                    a.tags = (("NM", self.nmtag), ("RG", "L1"))
+                    a.tags = (("NM", self.nmtag), ("RG", READ_GROUP_TAG))
                     f.write(a)
             # s=self.splits[-1]
             # a = pysam.AlignedSegment()
@@ -228,11 +235,11 @@ def calc_consensus_probabilities(cons_pos):
         probs = dict.fromkeys("ATCG", 0)
     cons_base = max(probs, key=probs.get)
     if probs[cons_base] == 1:
-        cons_phred = 60
+        cons_phred = MAX_PHRED_SCORE
     else:
         cons_phred = round(-10 * log10(1 - probs[cons_base]))
-        if cons_phred > 60:
-            cons_phred = 60
+        if cons_phred > MAX_PHRED_SCORE:
+            cons_phred = MAX_PHRED_SCORE
     return (cons_base, cons_phred)
 
 
@@ -245,75 +252,92 @@ def get_position_coverage(covpos):
     return coverage
 
 
-def getConsensus3(group_seqs, contig, regionid, indel_freq_threshold, umi_info, consensus_freq_threshold, output_json):
-    """Takes a list of pysam entries (rows in the BAM file) as input and generates a consensus sequence."""
+def _add_base_to_consensus(consensus, refpos, base, phred):
+    """Add a base with quality score to the consensus dictionary."""
+    if refpos not in consensus:
+        consensus[refpos] = {}
+    if base not in consensus[refpos]:
+        consensus[refpos][base] = []
+    consensus[refpos][base].append(phred)
+
+
+def _process_read_without_indel(read, consensus):
+    """Process a read without insertions or deletions."""
+    sequence = read.seq
+    qual = read.qual
+    for qpos, refpos in read.get_aligned_pairs(matches_only=True):
+        base = sequence[qpos]
+        _add_base_to_consensus(consensus, refpos, base, get_phred(qual[qpos]))
+
+
+def _process_read_with_indel(read, consensus):
+    """Process a read that contains insertions or deletions."""
+    positions = read.get_aligned_pairs(matches_only=True)
+    q, ref = positions[0]
+    q = q - 1
+    ref = ref - 1
+
+    for qpos, refpos in positions:
+        sequence = read.seq
+        qual = read.qual
+        base = sequence[qpos]
+
+        if qpos != q + 1:
+            # insertion
+            allele = read.seq[q + 1 : qpos]
+            if refpos not in consensus:
+                consensus[refpos] = {}
+            if "I" not in consensus[refpos]:
+                consensus[refpos]["I"] = {}
+            if allele not in consensus[refpos]["I"]:
+                consensus[refpos]["I"][allele] = 0
+            consensus[refpos]["I"][allele] += 1
+            _add_base_to_consensus(consensus, refpos, base, get_phred(qual[qpos]))
+
+        elif refpos != ref + 1:
+            # deletion
+            dellength = refpos - (ref + 1)
+            delpos = refpos - dellength
+            if delpos not in consensus:
+                consensus[delpos] = {}
+            if "D" not in consensus[delpos]:
+                consensus[delpos]["D"] = {}
+            if dellength not in consensus[delpos]["D"]:
+                consensus[delpos]["D"][dellength] = 0
+            consensus[delpos]["D"][dellength] += 1
+            _add_base_to_consensus(consensus, refpos, base, get_phred(qual[qpos]))
+
+        else:
+            _add_base_to_consensus(consensus, refpos, base, get_phred(qual[qpos]))
+
+        q = qpos
+        ref = refpos
+
+
+def _get_consensus_base_and_qual(consensus_pos, poscov):
+    """Calculate the consensus base and quality for a position."""
+    if poscov < COVERAGE_THRESHOLD_FOR_SIMPLE_CONSENSUS:
+        return calc_consensus_probabilities(consensus_pos)
+    else:
+        cons_base, _ = get_most_common_allele(consensus_pos)
+        return cons_base, MAX_PHRED_SCORE
+
+
+def _build_consensus_dict(group_seqs):
+    """Build consensus dictionary from a group of reads."""
     consensus = {}
     for read in group_seqs:
         if read.cigarstring:
-            if "I" not in read.cigarstring and "D" not in read.cigarstring:  # no indel in read
-                sequence = read.seq
-                qual = read.qual
-                for qpos, refpos in read.get_aligned_pairs(matches_only=True):
-                    base = sequence[qpos]
-                    if refpos not in consensus:
-                        consensus[refpos] = {}
-                    if base not in consensus[refpos]:
-                        consensus[refpos][base] = []
-                    consensus[refpos][base].append(get_phred(qual[qpos]))
-            else:  # indel at next position
-                positions = read.get_aligned_pairs(matches_only=True)
-                q, ref = positions[0]
-                q = q - 1
-                ref = ref - 1
-                for qpos, refpos in positions:
-                    if not qpos == q + 1:
-                        # insertion
-                        allele = read.seq[q + 1 : qpos]
-                        # inspos=refpos-1
-                        if refpos not in consensus:
-                            consensus[refpos] = {}
-                        if "I" not in consensus[refpos]:
-                            consensus[refpos]["I"] = {}
-                        if allele not in consensus[refpos]["I"]:
-                            consensus[refpos]["I"][allele] = 0
-                        consensus[refpos]["I"][allele] += 1
-                        sequence = read.seq
-                        qual = read.qual
-                        base = sequence[qpos]
-                        if base not in consensus[refpos]:
-                            consensus[refpos][base] = []
-                        consensus[refpos][base].append(get_phred(qual[qpos]))
-                    elif not refpos == ref + 1:
-                        # deletion
-                        dellength = refpos - (ref + 1)  # get the length of the deletion
-                        delpos = refpos - dellength
-                        # print(consensus[delpos])
-                        if delpos not in consensus:
-                            consensus[delpos] = {}
-                        if "D" not in consensus[delpos]:
-                            consensus[delpos]["D"] = {}
-                        if dellength not in consensus[delpos]["D"]:
-                            consensus[delpos]["D"][dellength] = 0
-                        consensus[delpos]["D"][dellength] += 1
-                        sequence = read.seq
-                        qual = read.qual
-                        base = sequence[qpos]
-                        if refpos not in consensus:
-                            consensus[refpos] = {}
-                        if base not in consensus[refpos]:
-                            consensus[refpos][base] = []
-                        consensus[refpos][base].append(get_phred(qual[qpos]))
-                    else:
-                        sequence = read.seq
-                        qual = read.qual
-                        base = sequence[qpos]
-                        if refpos not in consensus:
-                            consensus[refpos] = {}
-                        if base not in consensus[refpos]:
-                            consensus[refpos][base] = []
-                        consensus[refpos][base].append(get_phred(qual[qpos]))
-                    q = qpos
-                    ref = refpos
+            if "I" not in read.cigarstring and "D" not in read.cigarstring:
+                _process_read_without_indel(read, consensus)
+            else:
+                _process_read_with_indel(read, consensus)
+    return consensus
+
+
+def getConsensus3(group_seqs, contig, regionid, indel_freq_threshold, umi_info, consensus_freq_threshold, output_json):
+    """Takes a list of pysam entries (rows in the BAM file) as input and generates a consensus sequence."""
+    consensus = _build_consensus_dict(group_seqs)
     if len(consensus) > 0:
         # generate the consensus sequence
         consensus_sorted = sorted(consensus)
@@ -341,11 +365,11 @@ def getConsensus3(group_seqs, contig, regionid, indel_freq_threshold, umi_info, 
                         sequence = cons_allele
                         consread.add_insertion(sequence)
                     del consensus[pos]["I"]
-                    if poscov < 50:
+                    if poscov < COVERAGE_THRESHOLD_FOR_SIMPLE_CONSENSUS:
                         cons_base, cons_qual = calc_consensus_probabilities(consensus[pos])
                     else:
                         cons_base, percent = get_most_common_allele(consensus[pos])
-                        cons_qual = 60
+                        cons_qual = MAX_PHRED_SCORE
                     if not cons_base.startswith("D"):
                         consread.add_base(cons_base, get_ascii(cons_qual))
 
@@ -364,22 +388,22 @@ def getConsensus3(group_seqs, contig, regionid, indel_freq_threshold, umi_info, 
                             consread.add_base("N", get_ascii(0))
                             add_consensus = False
                     elif percent >= indel_freq_threshold:
-                        if poscov < 50:
+                        if poscov < COVERAGE_THRESHOLD_FOR_SIMPLE_CONSENSUS:
                             cons_base, cons_qual = calc_consensus_probabilities(consensus[pos])
                         else:
                             cons_base, percent = get_most_common_allele(consensus[pos])
-                            cons_qual = 60
+                            cons_qual = MAX_PHRED_SCORE
                         consread.add_base(cons_base, get_ascii(cons_qual))
                     else:
                         consread.add_base("N", get_ascii(0))
                         add_consensus = False
                 elif poscov >= 2:
                     # no indel
-                    if poscov < 50:
+                    if poscov < COVERAGE_THRESHOLD_FOR_SIMPLE_CONSENSUS:
                         cons_base, cons_qual = calc_consensus_probabilities(consensus[pos])
                     else:
                         cons_base, percent = get_most_common_allele(consensus[pos])
-                        cons_qual = 60
+                        cons_qual = MAX_PHRED_SCORE
                     if consensus_freq_threshold:  # test if not None
                         if len(consensus[pos]) == 1:  # 100%
                             consread.add_base(cons_base, get_ascii(cons_qual))
@@ -429,7 +453,7 @@ def getConsensusMostCommon(
         consread = consensus_read(contig, regionid, pos, umi_info.centroid, umi_info.count)
         if most_common_seq:
             for base in most_common_seq:
-                consread.add_base(base, get_ascii(60))
+                consread.add_base(base, get_ascii(MAX_PHRED_SCORE))
             if output_json:
                 consread.add_json_object(counts)
         return consread
@@ -477,7 +501,7 @@ def getConsensusMSA(
             fraction = (b[1] / n) * 100
             if b[0] not in "-":
                 if fraction >= consensus_freq_threshold:
-                    consread.add_base(b[0], get_ascii(60))
+                    consread.add_base(b[0], get_ascii(MAX_PHRED_SCORE))
                 else:
                     consread.add_base("N", get_ascii(0))
                     add_consensus = False

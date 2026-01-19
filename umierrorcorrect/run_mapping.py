@@ -4,6 +4,7 @@ import logging
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 import pysam
 
@@ -40,7 +41,7 @@ def parseArgs():
         "--remove_large_files",
         dest="remove_large_files",
         action="store_true",
-        help="Include this flag to emove the original Fastq and BAM files (reads without error correction).",
+        help="Include this flag to remove the original Fastq and BAM files (reads without error correction).",
     )
 
     parser.add_argument(
@@ -104,29 +105,32 @@ def run_mapping(num_threads, reference_file, fastq_files, output_path, sample_na
     """Run mapping with bwa to create a SAM file, then convert it to BAM, sort and index the file"""
     logging.info("Starting mapping with BWA")
     check_bwa_index(reference_file)
-    output_file = output_path + "/" + sample_name
-    logging.info(f"Creating output file: {output_file}.sorted.bam")
+    output_base = Path(output_path) / sample_name
+    sam_file = f"{output_base}.sam"
+    bam_file = f"{output_base}.bam"
+    sorted_bam = f"{output_base}.sorted.bam"
+    logging.info(f"Creating output file: {sorted_bam}")
     if len(fastq_files) == 1:
         bwacommand = ["bwa", "mem", "-t", num_threads, reference_file, fastq_files[0]]
     if len(fastq_files) == 2:
         bwacommand = ["bwa", "mem", "-t", num_threads, reference_file, fastq_files[0], fastq_files[1]]
 
-    with open(output_file + ".sam", "w") as g:
+    with open(sam_file, "w") as g:
         p1 = subprocess.Popen(bwacommand, stdout=g)
     p1.communicate()
     p1.wait()
-    pysam.view("-Sb", "-@", num_threads, output_file + ".sam", "-o", output_file + ".bam", catch_stdout=False)
+    pysam.view("-Sb", "-@", num_threads, sam_file, "-o", bam_file, catch_stdout=False)
 
-    pysam.sort("-@", num_threads, output_file + ".bam", "-o", output_file + ".sorted.bam", catch_stdout=False)
-    pysam.index(output_file + ".sorted.bam", catch_stdout=False)
-    os.remove(output_file + ".sam")
-    os.remove(output_file + ".bam")
+    pysam.sort("-@", num_threads, bam_file, "-o", sorted_bam, catch_stdout=False)
+    pysam.index(sorted_bam, catch_stdout=False)
+    os.remove(sam_file)
+    os.remove(bam_file)
     if remove_large_files:
         os.remove(fastq_files[0])
         if len(fastq_files) == 2:
             os.remove(fastq_files[1])
     logging.info("Finished mapping")
-    return output_file + ".sorted.bam"
+    return sorted_bam
 
 
 def main_cli():

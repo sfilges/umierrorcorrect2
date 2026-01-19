@@ -1,0 +1,69 @@
+#!/usr/bin/env python3
+"""Constants used throughout the umierrorcorrect package."""
+
+# =============================================================================
+# Phred Score Constants
+# =============================================================================
+MAX_PHRED_SCORE = 60
+"""Maximum phred quality score to assign to consensus bases."""
+
+PHRED_TABLE_SIZE = 94
+"""Size of phred lookup tables (ASCII 33-126)."""
+
+DEFAULT_MAPPING_QUALITY = 60
+"""Default mapping quality for consensus reads."""
+
+# =============================================================================
+# Consensus Generation Constants
+# =============================================================================
+COVERAGE_THRESHOLD_FOR_SIMPLE_CONSENSUS = 50
+"""Coverage threshold above which simple majority voting is used instead of
+probability-based consensus calculation."""
+
+DEFAULT_INDEL_FREQUENCY_THRESHOLD = 60.0
+"""Default frequency threshold (%) for including indels in consensus."""
+
+DEFAULT_CONSENSUS_FREQUENCY_THRESHOLD = 60.0
+"""Default frequency threshold (%) for consensus base calls."""
+
+# =============================================================================
+# UMI Clustering Constants
+# =============================================================================
+DEFAULT_EDIT_DISTANCE_THRESHOLD = 1
+"""Default edit distance threshold for UMI clustering."""
+
+SUBSTRING_OPTIMIZATION_THRESHOLD = 30
+"""Number of UMIs above which substring-based optimization is used for clustering."""
+
+# =============================================================================
+# Family Size Constants
+# =============================================================================
+DEFAULT_FAMILY_SIZES = (0, 1, 2, 3, 4, 5, 7, 10, 20, 30)
+"""Default family size thresholds for consensus statistics."""
+
+SINGLETON_FAMILY_SIZES = (0, 1)
+"""Family sizes used for singleton reads."""
+
+# =============================================================================
+# File Suffixes
+# =============================================================================
+CONSENSUS_BAM_SUFFIX = "_consensus_reads.bam"
+"""Suffix for consensus BAM output files."""
+
+CONSENSUS_TSV_SUFFIX = "_cons.tsv"
+"""Suffix for consensus TSV output files."""
+
+HISTOGRAM_SUFFIX = ".hist"
+"""Suffix for UMI family size histogram files."""
+
+# =============================================================================
+# BAM Tags
+# =============================================================================
+READ_GROUP_TAG = "L1"
+"""Default read group tag for consensus reads."""
+
+NM_TAG = "NM"
+"""Edit distance tag name."""
+
+RG_TAG = "RG"
+"""Read group tag name."""

@@ -3,9 +3,13 @@ import sys
 
 import pysam
 
+# Type alias for region dictionary
+RegionDict = dict[str, list[tuple[int, int, str]]]
 
-def read_bed(bedfile):
-    regions = {}
+
+def read_bed(bedfile: str) -> RegionDict:
+    """Read a BED file and return regions organized by contig."""
+    regions: RegionDict = {}
     with open(bedfile) as f:
         for line in f:
             line = line.strip()
@@ -18,21 +22,23 @@ def read_bed(bedfile):
     return regions
 
 
-def sort_regions(regions):
-    newregions = {}
+def sort_regions(regions: RegionDict) -> RegionDict:
+    """Sort regions by start position within each contig."""
+    newregions: RegionDict = {}
     for contig in regions:
         newregions[contig] = sorted(regions[contig], key=lambda tup: tup[0])
     return newregions
 
 
-def merge_regions(regions, pos_threshold):
-    newregions = {}
+def merge_regions(regions: RegionDict, pos_threshold: int) -> RegionDict:
+    """Merge overlapping or adjacent regions within threshold distance."""
+    newregions: RegionDict = {}
     for contig in regions:
         newregions[contig] = []
         starts, ends, names = zip(*regions[contig])
         current_start = starts[0]
         current_end = ends[0]
-        current_name = []
+        current_name: list[str] = []
         current_name.append(names[0])
 
         for current_index, start in enumerate(starts):
@@ -52,34 +58,34 @@ def merge_regions(regions, pos_threshold):
     return newregions
 
 
-def get_annotation(regions, pos):
+def get_annotation(regions: list[tuple[int, int, str]], pos: int) -> str:
+    """Get annotation for a position from a list of regions."""
     for start, end, name in regions:
         if pos >= start and pos <= end:
             return name
-            break
-    else:
-        return ""
+    return ""
 
 
-def get_annotation2(regions, pos):
-    annotation = []
+def get_annotation2(regions: list[tuple[int, int, str]], pos: int) -> str:
+    """Get all annotations for a position (comma-separated if multiple)."""
+    annotation: list[str] = []
     for start, end, name in regions:
         if pos >= start and pos <= end:
             annotation.append(name)
     return ",".join(annotation)
 
 
-def get_overlap(annotation_regions, start, end):
+def get_overlap(annotation_regions: list[tuple[int, int, str]], start: int, end: int) -> str:
+    """Check if a region overlaps with any annotation region."""
     for annotation_start, annotation_end, annotation_name in annotation_regions:
         if annotation_start <= end and start <= annotation_end:  # test for overlap
             return annotation_name
-            break
-    else:
-        return ""
+    return ""
 
 
-def expand_regions_from_bed(regions, bamfile):
-    newregions = {}
+def expand_regions_from_bed(regions: RegionDict, bamfile: str) -> RegionDict:
+    """Expand regions based on actual read positions in BAM file."""
+    newregions: RegionDict = {}
     with pysam.AlignmentFile(bamfile, "rb") as f:
         for contig in regions:
             newregions[contig] = []
@@ -98,7 +104,8 @@ def expand_regions_from_bed(regions, bamfile):
     return newregions
 
 
-def main(bedfile, bamfile):
+def main(bedfile: str, bamfile: str) -> None:
+    """Main function for testing BED file reading."""
     regions = read_bed(bedfile)
     regions = sort_regions(regions)
     regions = merge_regions(regions, 0)

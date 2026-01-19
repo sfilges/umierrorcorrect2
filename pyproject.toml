@@ -21,12 +21,16 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
-dependencies = ["pysam>=0.8.4", "scipy", "matplotlib"]
+dependencies = ["pysam>=0.8.4", "scipy", "matplotlib", "loguru>=0.7.0", "typer[all]>=0.9.0"]
 
 [project.optional-dependencies]
 dev = ["ruff", "pytest", "pytest-cov", "mypy", "pre-commit"]
 
 [project.scripts]
+# New unified Typer CLI
+umierrorcorrect = "umierrorcorrect.cli:main_cli"
+
+# Legacy entry points (for backwards compatibility)
 run_umierrorcorrect = "umierrorcorrect.run_umierrorcorrect:main_cli"
 preprocess = "umierrorcorrect.preprocess:main_cli"
 run_mapping = "umierrorcorrect.run_mapping:main_cli"

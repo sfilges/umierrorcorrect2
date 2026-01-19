@@ -8,6 +8,7 @@ import re
 import subprocess
 import sys
 from multiprocessing import Pool, cpu_count
+from pathlib import Path
 
 import pysam
 
@@ -89,7 +90,7 @@ def parseArgs():
         "--remove_large_files",
         dest="remove_large_files",
         action="store_true",
-        help="Include this flag to emove the original Fastq and BAM files (reads without error correction).",
+        help="Include this flag to remove the original Fastq and BAM files (reads without error correction).",
     )
     parser.add_argument(
         "-d",
@@ -292,7 +293,8 @@ def update_bam_header(bamfile, samplename):
 def merge_bams(output_path, original_bamfile, bamfilelist, sample_name):
     """Merge all BAM files for in bamfilelist, and remove temporary files"""
     new_header = update_bam_header(original_bamfile, sample_name)
-    g = pysam.AlignmentFile(output_path + "/" + sample_name + "_consensus_reads.bam", "wb", header=new_header)
+    output_bam = Path(output_path) / f"{sample_name}_consensus_reads.bam"
+    g = pysam.AlignmentFile(str(output_bam), "wb", header=new_header)
     for filename in bamfilelist:
         with pysam.AlignmentFile(filename, "rb") as f1:
             for line in f1:
@@ -305,7 +307,8 @@ def merge_bams(output_path, original_bamfile, bamfilelist, sample_name):
 
 def merge_cons(output_path, consfilelist, sample_name):
     """Merge all cons files in consfilelist and remove temporary files."""
-    with open(output_path + "/" + sample_name + "_cons.tsv", "w") as g:
+    output_tsv = Path(output_path) / f"{sample_name}_cons.tsv"
+    with open(output_tsv, "w") as g:
         g.write(
             "Sample Name\tContig\tPosition\tName\tReference\tA\tC\tG\tT\tI\tD\tN\tCoverage\tConsensus group size\tMax Non-ref Allele Count\tMax Non-ref Allele Frequency\tMax Non-ref Allele\n"
         )
@@ -319,32 +322,64 @@ def merge_cons(output_path, consfilelist, sample_name):
 
 
 def check_duplicate_positions(cons_file):
+    """Check for duplicate positions in consensus file.
+
+    Uses proper temporary files and avoids shell=True for security.
+    """
+    import shutil
+    import tempfile
+
     chrlist = []
-    with open(cons_file) as f, open("tmp.txt", "w") as g:
-        f.readline()
-        for line in f:
-            parts = line.split("\t")
-            if parts[1] not in chrlist:
-                chrlist.append(parts[1])
-            if parts[13] == "0":
-                g.write(" ".join(parts[1:3]) + "\n")
-    command1 = ["sort tmp.txt | uniq -d"]
-    with open("tmp2.txt", "w") as g:
-        p1 = subprocess.Popen(command1, shell=True, stdout=g)
-        p1.communicate()
-    os.remove("tmp.txt")
-    duppos = {}
-    for chrx in chrlist:
-        duppos[chrx] = []
-    with open("tmp2.txt") as f:
-        for line in f:
-            line = line.rstrip()
-            parts = line.split()
-            chrx = parts[0]
-            pos = parts[1]
-            duppos[chrx].append(pos)
-    os.remove("tmp2.txt")
-    return duppos
+
+    # Create temporary files in a secure way
+    with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt") as tmp1:
+        tmp1_path = tmp1.name
+        with open(cons_file) as f:
+            f.readline()
+            for line in f:
+                parts = line.split("\t")
+                if parts[1] not in chrlist:
+                    chrlist.append(parts[1])
+                if parts[13] == "0":
+                    tmp1.write(" ".join(parts[1:3]) + "\n")
+
+    # Use proper subprocess chaining without shell=True
+    with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt") as tmp2:
+        tmp2_path = tmp2.name
+
+    try:
+        # Find sort and uniq commands
+        sort_cmd = shutil.which("sort") or "sort"
+        uniq_cmd = shutil.which("uniq") or "uniq"
+
+        with open(tmp2_path, "w") as outfile:
+            # Chain: sort tmp1 | uniq -d > tmp2
+            p1 = subprocess.Popen([sort_cmd, tmp1_path], stdout=subprocess.PIPE)
+            p2 = subprocess.Popen([uniq_cmd, "-d"], stdin=p1.stdout, stdout=outfile)
+            p1.stdout.close()  # Allow p1 to receive SIGPIPE if p2 exits
+            p2.communicate()
+
+        duppos = {}
+        for chrx in chrlist:
+            duppos[chrx] = []
+
+        with open(tmp2_path) as f:
+            for line in f:
+                line = line.rstrip()
+                parts = line.split()
+                if len(parts) >= 2:
+                    chrx = parts[0]
+                    pos = parts[1]
+                    duppos[chrx].append(pos)
+
+        return duppos
+
+    finally:
+        # Clean up temporary files
+        if os.path.exists(tmp1_path):
+            os.remove(tmp1_path)
+        if os.path.exists(tmp2_path):
+            os.remove(tmp2_path)
 
 
 def sum_lists(*args):
@@ -466,7 +501,8 @@ def merge_tmp_cons_files(chrlist, cons_file):
 
 def merge_stat(output_path, statfilelist, sample_name):
     """Merge all stat files in statfilelist and remove temporary files."""
-    with open(output_path + "/" + sample_name + ".hist", "w") as g:
+    output_hist = Path(output_path) / f"{sample_name}.hist"
+    with open(output_hist, "w") as g:
         for filename in statfilelist:
             with open(filename) as f:
                 for line in f:
@@ -479,7 +515,7 @@ def merge_stat(output_path, statfilelist, sample_name):
 def merge_duplicate_stat(output_path, samplename):
     convert = lambda text: int(text) if text.isdigit() else text.lower()
     alphanum_key = lambda key: [convert(c) for c in re.split("([0-9]+)", key)]
-    histfile = output_path + "/" + samplename + ".hist"
+    histfile = Path(output_path) / f"{samplename}.hist"
     regions = {}
     # histfile
     with open(histfile) as f:
@@ -709,13 +745,14 @@ def run_umi_errorcorrect(args):
         sys.exit(1)
     logging.info(f"Group by position method: {group_method}")
     logging.info(f"Consensus method: {consensus_method}")
+    output_path = Path(args.output_path)
     if not args.bam_file:  # see if it is possible to guess bam file from previous step.
         if args.sample_name:
-            testname = args.output_path + "/" + args.sample_name + ".sorted.bam"
-            if os.path.isfile(testname):
-                args.bam_file = testname
+            testname = output_path / f"{args.sample_name}.sorted.bam"
+            if testname.is_file():
+                args.bam_file = str(testname)
     if not args.bam_file:
-        bamfile = glob.glob(args.output_path + "/*sorted.bam")
+        bamfile = glob.glob(str(output_path / "*sorted.bam"))
         if len(bamfile) > 1:
             print(
                 "Too many sorted.bam files in output folder, please specify which sample to run with -s (sample name) or -b (path to bam file)."
@@ -791,12 +828,13 @@ def run_umi_errorcorrect(args):
             args.output_json,
         )
     merge_bams(args.output_path, args.bam_file, bamfilelist, args.sample_name)
-    index_bam_file(args.output_path + "/" + args.sample_name + "_consensus_reads.bam", num_cpus)
+    consensus_bam = output_path / f"{args.sample_name}_consensus_reads.bam"
+    index_bam_file(str(consensus_bam), num_cpus)
     consfilelist = [x.rstrip(".bam") + ".cons" for x in bamfilelist]
     merge_cons(args.output_path, consfilelist, args.sample_name)
-    cons_file = args.output_path + "/" + args.sample_name + "_cons.tsv"
+    cons_file = output_path / f"{args.sample_name}_cons.tsv"
     if args.remove_large_files:
-        os.remove(args.output_path + "/" + args.bam_file)
+        os.remove(output_path / args.bam_file)
 
     statfilelist = [x.rstrip(".bam") + ".hist" for x in bamfilelist]
     merge_stat(args.output_path, statfilelist, args.sample_name)
@@ -805,10 +843,8 @@ def run_umi_errorcorrect(args):
         merge_duplicate_positions_all_chromosomes(duppos, cons_file, num_cpus)
     merge_duplicate_stat(args.output_path, args.sample_name)
     logging.info(
-        "Consensus generation complete, output written to {}, {}".format(
-            args.output_path + "/" + args.sample_name + "_consensus_reads.bam",
-            args.output_path + "/" + args.sample_name + "_cons.tsv",
-        )
+        f"Consensus generation complete, output written to {args.output_path}/{args.sample_name}_consensus_reads.bam, "
+        f"{args.output_path}/{args.sample_name}_cons.tsv"
     )
 
 

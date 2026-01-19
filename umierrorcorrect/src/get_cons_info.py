@@ -8,6 +8,7 @@ from collections import Counter
 
 import pysam
 
+from umierrorcorrect.src.constants import DEFAULT_FAMILY_SIZES, SINGLETON_FAMILY_SIZES
 from umierrorcorrect.src.get_consensus3 import get_all_consensus, get_cons_dict, get_reference_sequence
 from umierrorcorrect.src.get_regions_from_bed import (
     get_annotation2,
@@ -17,7 +18,7 @@ from umierrorcorrect.src.get_regions_from_bed import (
 )
 
 
-def get_cons_info(consensus_seq, singletons, fsizes=[0, 1, 2, 3, 4, 5, 7, 10, 20, 30]):
+def get_cons_info(consensus_seq, singletons, fsizes=DEFAULT_FAMILY_SIZES):
     """loop through the consensus reads to collapse alleles for each position"""
     cons = {}
     for consensus_read in consensus_seq.values():
@@ -147,7 +148,7 @@ def get_cons_info(consensus_seq, singletons, fsizes=[0, 1, 2, 3, 4, 5, 7, 10, 20
                 base = sequence[qpos]
                 if refpos not in cons:
                     cons[refpos] = {}
-                for fsize in [0, 1]:
+                for fsize in SINGLETON_FAMILY_SIZES:
                     if fsize not in cons[refpos]:
                         cons[refpos][fsize] = Counter()
                     cons[refpos][fsize][base] += 1
@@ -163,7 +164,7 @@ def get_cons_info(consensus_seq, singletons, fsizes=[0, 1, 2, 3, 4, 5, 7, 10, 20
                     # inspos=refpos-1
                     if refpos not in cons:
                         cons[refpos] = {}
-                    for fsize in [0, 1]:
+                    for fsize in SINGLETON_FAMILY_SIZES:
                         if fsize not in cons[refpos]:
                             cons[refpos][fsize] = Counter()
                         cons[refpos][fsize]["I"] += 1
@@ -174,7 +175,7 @@ def get_cons_info(consensus_seq, singletons, fsizes=[0, 1, 2, 3, 4, 5, 7, 10, 20
                     delpos = refpos - dellength
                     if delpos not in cons:
                         cons[delpos] = {}
-                    for fsize in [0, 1]:
+                    for fsize in SINGLETON_FAMILY_SIZES:
                         if fsize not in cons[delpos]:
                             cons[delpos][fsize] = Counter()
                         cons[delpos][fsize]["D"] += 1
@@ -182,7 +183,7 @@ def get_cons_info(consensus_seq, singletons, fsizes=[0, 1, 2, 3, 4, 5, 7, 10, 20
                 base = sequence[qpos]
                 if refpos not in cons:
                     cons[refpos] = {}
-                for fsize in [0, 1]:
+                for fsize in SINGLETON_FAMILY_SIZES:
                     if fsize not in cons[refpos]:
                         cons[refpos][fsize] = Counter()
                     cons[refpos][fsize][base] += 1
@@ -192,7 +193,7 @@ def get_cons_info(consensus_seq, singletons, fsizes=[0, 1, 2, 3, 4, 5, 7, 10, 20
                     base = sequence[qpos]
                     if refpos not in cons:
                         cons[refpos] = {}
-                    for fsize in [0, 1]:
+                    for fsize in SINGLETON_FAMILY_SIZES:
                         if fsize not in cons[refpos]:
                             cons[refpos][fsize] = Counter()
                         cons[refpos][fsize][base] += 1

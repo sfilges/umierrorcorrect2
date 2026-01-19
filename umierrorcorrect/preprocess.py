@@ -17,6 +17,7 @@ import logging
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 from umierrorcorrect.src.check_args import check_args_fastq
 from umierrorcorrect.src.handle_sequences import read_fastq, read_fastq_paired_end
@@ -130,14 +131,15 @@ def generate_random_dir(tmpdir):
     """Generate a directory for storing temporary files, using a timestamp."""
     import datetime
 
-    newtmpdir = tmpdir + "/r" + datetime.datetime.now().strftime("%y%m%d_%H%M%S") + "/"
-    newtmpdir = check_output_directory(newtmpdir)
+    newtmpdir = Path(tmpdir) / f"r{datetime.datetime.now().strftime('%y%m%d_%H%M%S')}"
+    newtmpdir = check_output_directory(str(newtmpdir))
     return newtmpdir
 
 
 def run_unpigz(filename, tmpdir, num_threads, program):
     """Unzip the fastq.gz files using parallel gzip (pigz)."""
-    outfilename = tmpdir + "/" + filename.split("/")[-1].rstrip(".gz")
+    input_path = Path(filename)
+    outfilename = Path(tmpdir) / input_path.name.removesuffix(".gz")
     if program == "pigz":
         command = ["unpigz", "-p", num_threads, "-c", filename]
     elif program == "gzip":
@@ -146,18 +148,19 @@ def run_unpigz(filename, tmpdir, num_threads, program):
         p = subprocess.Popen(command, stdout=g)
         p.communicate()
         p.wait()
-    return outfilename
+    return str(outfilename)
 
 
 def run_gunzip(filename, tmpdir):
     """Unzip the fastq.gz files using parallel gzip (pigz)."""
-    outfilename = tmpdir + "/" + filename.split("/")[-1].rstrip(".gz")
+    input_path = Path(filename)
+    outfilename = Path(tmpdir) / input_path.name.removesuffix(".gz")
     command = ["gunzip", "-c", filename]
     with open(outfilename, "w") as g:
         p = subprocess.Popen(command, stdout=g)
         p.communicate()
         p.wait()
-    return outfilename
+    return str(outfilename)
 
 
 def run_pigz(filename, num_threads, program):
@@ -243,12 +246,13 @@ def run_preprocessing(args):
         else:
             adapter = args.adapter_sequence.upper()
 
+        output_path = Path(args.output_path)
         if args.mode == "single":
-            outfilename = args.output_path + "/" + args.sample_name + "_trimmed.fastq"
+            outfilename = str(output_path / f"{args.sample_name}_trimmed.fastq")
             command = ["cutadapt", "-a", adapter, "-o", outfilename, "-O", "3", "-m", "20", r1file]
         else:
-            outfile1 = args.output_path + "/" + args.sample_name + "_R1_trimmed.fastq"
-            outfile2 = args.output_path + "/" + args.sample_name + "_R2_trimmed.fastq"
+            outfile1 = str(output_path / f"{args.sample_name}_R1_trimmed.fastq")
+            outfile2 = str(output_path / f"{args.sample_name}_R2_trimmed.fastq")
             command = [
                 "cutadapt",
                 "-a",
@@ -279,26 +283,27 @@ def run_preprocessing(args):
             r1file = outfile1
             r2file = outfile2
 
+    output_path = Path(args.output_path)
     if args.mode == "single":
-        outfilename = args.output_path + "/" + args.sample_name + "_umis_in_header.fastq"
+        outfilename = str(output_path / f"{args.sample_name}_umis_in_header.fastq")
         nseqs = preprocess_se(r1file, outfilename, args.umi_length, args.spacer_length)
         run_pigz(outfilename, args.num_threads, args.gziptool)
         os.remove(r1file)
         os.rmdir(newtmpdir)
-        fastqfiles = [outfilename + ".gz"]
+        fastqfiles = [f"{outfilename}.gz"]
     else:
         if args.reverse_index:
             # switch forward and reverse read
             r1filetmp = r1file
             r1file = r2file
             r2file = r1filetmp
-            outfile1 = args.output_path + "/" + args.sample_name + "_R2_umis_in_header.fastq"
-            outfile2 = args.output_path + "/" + args.sample_name + "_R1_umis_in_header.fastq"
+            outfile1 = str(output_path / f"{args.sample_name}_R2_umis_in_header.fastq")
+            outfile2 = str(output_path / f"{args.sample_name}_R1_umis_in_header.fastq")
         else:
             # r1file=args.read1
             # r2file=args.read2
-            outfile1 = args.output_path + "/" + args.sample_name + "_R1_umis_in_header.fastq"
-            outfile2 = args.output_path + "/" + args.sample_name + "_R2_umis_in_header.fastq"
+            outfile1 = str(output_path / f"{args.sample_name}_R1_umis_in_header.fastq")
+            outfile2 = str(output_path / f"{args.sample_name}_R2_umis_in_header.fastq")
         nseqs = preprocess_pe(r1file, r2file, outfile1, outfile2, args.umi_length, args.spacer_length, args.dual_index)
         run_pigz(outfile1, args.num_threads, args.gziptool)
         run_pigz(outfile2, args.num_threads, args.gziptool)

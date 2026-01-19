@@ -5,32 +5,39 @@ import itertools
 
 # import sys
 import pickle
+from collections.abc import Generator
+
+from umierrorcorrect.src.constants import SUBSTRING_OPTIMIZATION_THRESHOLD
 
 
 class umi_cluster:
-    def __init__(self, name, count):
-        self.centroid = name
-        self.count = count
+    """Container for UMI cluster information."""
 
-    def add_count(self, newcount):
+    def __init__(self, name: str, count: int) -> None:
+        self.centroid: str = name
+        self.count: int = count
+
+    def add_count(self, newcount: int) -> None:
         self.count += newcount
 
-    def change_centroid(self, newname):
+    def change_centroid(self, newname: str) -> None:
         self.centroid = newname
 
 
-def hamming_distance(a, b):
-    """Returns the Hamming distance between two strings of equal length"""
+def hamming_distance(a: str, b: str) -> int:
+    """Returns the Hamming distance between two strings of equal length."""
     try:
         assert len(a) == len(b)
         return sum(i != j for i, j in zip(a, b))
     except AssertionError as error:
         print(f"Barcode lengths are not equal for {a}. {b}")
-        raise (error)
+        raise error
 
 
-def create_substring_matrix(barcodedict, edit_distance_threshold):
-    """Divide each barcode in two or three substrings of (approximately) equal length"""
+def create_substring_matrix(
+    barcodedict: dict[str, int], edit_distance_threshold: int
+) -> list[dict[str, list[str]]]:
+    """Divide each barcode in two or three substrings of (approximately) equal length."""
     edit_distance_threshold = int(edit_distance_threshold)
     umi_length = len(list(barcodedict.keys())[0])
     if edit_distance_threshold <= 1:
@@ -68,8 +75,10 @@ def create_substring_matrix(barcodedict, edit_distance_threshold):
         return [substr_dict1, substr_dict2, substr_dict3]
 
 
-def get_adj_matrix_from_substring(barcodedict, substrdictlist):
-    """A generator that generates combinations to test for edit distance"""
+def get_adj_matrix_from_substring(
+    barcodedict: dict[str, int], substrdictlist: list[dict[str, list[str]]]
+) -> Generator[tuple[str, str], None, None]:
+    """A generator that generates combinations to test for edit distance."""
     umi_length = len(list(barcodedict.keys())[0])
     if len(substrdictlist) == 2:
         substr_dict1, substr_dict2 = substrdictlist
@@ -101,10 +110,13 @@ def get_adj_matrix_from_substring(barcodedict, substrdictlist):
     # return(comb)
 
 
-def cluster_barcodes(barcodedict, edit_distance_threshold):
+def cluster_barcodes(
+    barcodedict: dict[str, int], edit_distance_threshold: int
+) -> dict[str, list[str]]:
+    """Cluster barcodes by edit distance."""
     edit_distance_threshold = int(edit_distance_threshold)
-    adj_matrix = {}
-    if len(barcodedict) > 30:
+    adj_matrix: dict[str, list[str]] = {}
+    if len(barcodedict) > SUBSTRING_OPTIMIZATION_THRESHOLD:
         # compare substrings for speedup
         substring_matrix = create_substring_matrix(barcodedict, edit_distance_threshold)
         comb = get_adj_matrix_from_substring(barcodedict, substring_matrix)
@@ -127,9 +139,12 @@ def cluster_barcodes(barcodedict, edit_distance_threshold):
     return adj_matrix
 
 
-def get_connected_components(barcodedict, adj_matrix):
-    clusters = list()
-    added = list()
+def get_connected_components(
+    barcodedict: dict[str, int], adj_matrix: dict[str, list[str]]
+) -> list[list[str]]:
+    """Get connected components from the adjacency matrix."""
+    clusters: list[list[str]] = []
+    added: list[str] = []
     umi_sorted = sorted(barcodedict, key=lambda x: barcodedict[x], reverse=True)  # sort umis by counts, reversed
     for umi in umi_sorted:
         if umi not in added:
@@ -151,8 +166,11 @@ def get_connected_components(barcodedict, adj_matrix):
     return clusters
 
 
-def merge_clusters(barcodedict, clusters):
-    umis = {}
+def merge_clusters(
+    barcodedict: dict[str, int], clusters: list[list[str]]
+) -> dict[str, umi_cluster]:
+    """Merge UMI clusters and return dictionary mapping barcodes to cluster info."""
+    umis: dict[str, umi_cluster] = {}
     # add all umis separately
     for name, count in barcodedict.items():
         umis[name] = umi_cluster(name, count)
