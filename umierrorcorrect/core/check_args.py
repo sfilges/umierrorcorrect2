@@ -1,48 +1,14 @@
 #!/usr/bin/env python3
 
-import errno
-import os
-import re
-import subprocess
+import shutil
 from argparse import Namespace
 from pathlib import Path
-from typing import Literal
 
-
-def check_output_directory(outdir: str) -> str:
-    """Check if outdir exists, otherwise create it."""
-    outdir_path = Path(outdir)
-    if outdir_path.is_dir():
-        return outdir
-    else:
-        outdir_path.mkdir()
-        return outdir
-
-
-def get_sample_name(filename: str, mode: Literal["single", "paired", "bam"]) -> str:
-    """Get the sample name as the basename of the input files."""
-    basename = Path(filename).name
-    if mode == "single":
-        sample_name = basename.removesuffix(".gz").removesuffix(".fastq")
-    elif mode == "paired":
-        sample_name = basename.removesuffix(".gz").removesuffix(".fastq")
-        if sample_name.endswith("_001"):
-            sample_name = sample_name[:-4]
-        if re.match(".*R[1-2]$", sample_name):
-            sample_name = sample_name[:-2]
-        sample_name = sample_name.rstrip("_")
-        if re.search(".*_L00[0-9]$", sample_name):
-            sample_name = sample_name[:-5]
-    elif mode == "bam":
-        sample_name = basename
-        if ".sorted" in sample_name:
-            sample_name = sample_name.replace(".sorted", "")
-        sample_name = sample_name.replace(".bam", "")
-    return sample_name
+from umierrorcorrect.core.utils import check_output_directory, get_sample_name
 
 
 def is_tool(name: str) -> bool:
-    """Check if a command-line tool is available.
+    """Check if a command-line tool is available in PATH.
 
     Args:
         name: Name of the tool to check.
@@ -50,18 +16,7 @@ def is_tool(name: str) -> bool:
     Returns:
         True if the tool is available, False otherwise.
     """
-    try:
-        with Path(os.devnull).open("w") as devnull:
-            subprocess.run(
-                [name, "--version"],
-                stdout=devnull,
-                stderr=devnull,
-                check=False,
-            )
-    except OSError as e:
-        if e.errno == errno.ENOENT:
-            return False
-    return True
+    return shutil.which(name) is not None
 
 
 def check_args_fastq(args: Namespace) -> Namespace:
@@ -142,11 +97,3 @@ def check_args_bam(args: Namespace) -> Namespace:
         raise ValueError("To use option regions_from_bed a bedfile needs to be supplied, using -bed option")
     return args
 
-
-if __name__ == "__main__":
-    is_pigz = is_tool("pigz")
-    is_gzip = is_tool("gzip")
-    is_bwa = is_tool("bwa")
-    print(is_pigz)
-    print(is_gzip)
-    print(is_bwa)

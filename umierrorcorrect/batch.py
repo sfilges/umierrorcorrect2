@@ -6,7 +6,6 @@ and QC report generation.
 """
 
 import csv
-import shutil
 import subprocess
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass
@@ -16,6 +15,7 @@ from typing import Optional
 from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn
 
+from umierrorcorrect.core.check_args import is_tool
 from umierrorcorrect.core.constants import HISTOGRAM_SUFFIX
 from umierrorcorrect.core.logging_config import (
     add_file_handler,
@@ -196,11 +196,6 @@ def parse_sample_sheet(csv_path: Path) -> list[Sample]:
     return samples
 
 
-def check_tool_available(tool: str) -> bool:
-    """Check if an external tool is available in PATH."""
-    return shutil.which(tool) is not None
-
-
 def run_fastp(
     sample: Sample,
     output_dir: Path,
@@ -220,7 +215,7 @@ def run_fastp(
     Returns:
         FilteredSample with paths to filtered files, or None if fastp not available.
     """
-    if not check_tool_available("fastp"):
+    if not is_tool("fastp"):
         logger.warning("fastp not found in PATH, skipping pre-filtering")
         return None
 
@@ -285,7 +280,7 @@ def run_fastqc(files: list[Path], output_dir: Path, threads: int = 4) -> bool:
     Returns:
         True if successful, False otherwise.
     """
-    if not check_tool_available("fastqc"):
+    if not is_tool("fastqc"):
         logger.warning("fastqc not found in PATH, skipping QC")
         return False
 
@@ -314,7 +309,7 @@ def run_multiqc(input_dir: Path, output_dir: Path) -> bool:
     Returns:
         True if successful, False otherwise.
     """
-    if not check_tool_available("multiqc"):
+    if not is_tool("multiqc"):
         logger.warning("multiqc not found in PATH, skipping aggregation")
         return False
 

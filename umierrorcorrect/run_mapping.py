@@ -11,27 +11,31 @@ logger = get_logger(__name__)
 
 
 def check_bwa_index(reference_file):
-    """Check if BWA index files exists, otherwise create"""
+    """Check if BWA index files exists, otherwise create."""
     ref_path = Path(reference_file)
     if not ref_path.is_file():
-        print(f"Reference genome file {reference_file} does not exist, exiting")
+        logger.error(f"Reference genome file {reference_file} does not exist, exiting")
         sys.exit(1)
-    else:
-        if not Path(reference_file + ".bwt").is_file():  # check if index exists
-            print(f"BWA index for reference genome file {reference_file} does not exist")
-            answer = input("Do you want to create a BWA index now? (y/n) ".lower().strip())
-            while not (answer == "y" or answer == "yes" or answer == "n" or answer == "no"):
-                print("Answer yes or no ")
-                answer = input("Do you want to create a BWA index now? (y/n) ".lower().strip())
-            if answer[0] == "y":
-                create_index = True
-            else:
-                create_index = False
-                sys.exit(1)
-            if create_index:
-                a = subprocess.Popen(["bwa", "index", reference_file], stderr=subprocess.PIPE)
-                _, stderr = a.communicate()
-                log_subprocess_stderr(stderr, "bwa-index")
+
+    if not Path(reference_file + ".bwt").is_file():  # check if index exists
+        logger.warning(f"BWA index for reference genome file {reference_file} does not exist")
+        answer = input("Do you want to create a BWA index now? (y/n) ").lower().strip()
+        while answer not in ("y", "yes", "n", "no"):
+            logger.warning("Answer yes or no")
+            answer = input("Do you want to create a BWA index now? (y/n) ").lower().strip()
+        if answer[0] != "y":
+            sys.exit(1)
+        try:
+            logger.info("Creating BWA index...")
+            result = subprocess.run(
+                ["bwa", "index", reference_file],
+                capture_output=True,
+                check=True,
+            )
+            log_subprocess_stderr(result.stderr, "bwa-index")
+        except subprocess.CalledProcessError as e:
+            logger.error(f"bwa index failed: {e.stderr.decode() if e.stderr else 'Unknown error'}")
+            sys.exit(1)
 
 
 def run_mapping(num_threads, reference_file, fastq_files, output_path, sample_name, remove_large_files):
@@ -48,11 +52,13 @@ def run_mapping(num_threads, reference_file, fastq_files, output_path, sample_na
     if len(fastq_files) == 2:
         bwacommand = ["bwa", "mem", "-t", num_threads, reference_file, fastq_files[0], fastq_files[1]]
 
-    with Path(sam_file).open("w") as g:
-        p1 = subprocess.Popen(bwacommand, stdout=g, stderr=subprocess.PIPE)
-        _, stderr = p1.communicate()
-        log_subprocess_stderr(stderr, "bwa-mem")
-    p1.wait()
+    try:
+        with Path(sam_file).open("w") as g:
+            result = subprocess.run(bwacommand, stdout=g, stderr=subprocess.PIPE, check=True)
+            log_subprocess_stderr(result.stderr, "bwa-mem")
+    except subprocess.CalledProcessError as e:
+        logger.error(f"bwa mem failed: {e.stderr.decode() if e.stderr else 'Unknown error'}")
+        return None
     pysam.view("-Sb", "-@", num_threads, sam_file, "-o", bam_file, catch_stdout=False)
 
     pysam.sort("-@", num_threads, bam_file, "-o", sorted_bam, catch_stdout=False)

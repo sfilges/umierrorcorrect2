@@ -5,10 +5,10 @@ from pathlib import Path
 import pytest
 from umierrorcorrect.batch import (
     Sample,
-    check_tool_available,
     discover_samples,
     parse_sample_sheet,
 )
+from umierrorcorrect.core.check_args import is_tool
 
 
 class TestSampleDataclass:
@@ -228,14 +228,14 @@ class TestParseSampleSheet:
         assert len(samples) == 3
 
 
-class TestCheckToolAvailable:
-    """Tests for check_tool_available function."""
+class TestIsTool:
+    """Tests for is_tool function."""
 
     def test_existing_tool(self):
-        """Test that check_tool_available returns True for existing tools."""
+        """Test that is_tool returns True for existing tools."""
         # 'python' should exist on any system running this test
-        assert check_tool_available("python") is True
+        assert is_tool("python") is True
 
     def test_nonexistent_tool(self):
-        """Test that check_tool_available returns False for non-existent tools."""
-        assert check_tool_available("nonexistent_tool_xyz123") is False
+        """Test that is_tool returns False for non-existent tools."""
+        assert is_tool("nonexistent_tool_xyz123") is False

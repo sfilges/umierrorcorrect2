@@ -3,7 +3,8 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
-from umierrorcorrect.core.check_args import check_output_directory, get_sample_name, is_tool
+from umierrorcorrect.core.check_args import is_tool
+from umierrorcorrect.core.utils import check_output_directory, get_sample_name
 
 
 class PreprocessConfig(BaseModel):

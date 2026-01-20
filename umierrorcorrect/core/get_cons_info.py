@@ -1,7 +1,7 @@
 from collections import Counter
 
 from umierrorcorrect.core.constants import DEFAULT_FAMILY_SIZES, SINGLETON_FAMILY_SIZES
-from umierrorcorrect.core.get_regions_from_bed import get_annotation2
+from umierrorcorrect.core.get_regions_from_bed import get_all_annotations
 
 
 def get_cons_info(consensus_seq, singletons, fsizes=DEFAULT_FAMILY_SIZES):
@@ -210,7 +210,7 @@ def write_consensus(f, cons, ref_seq, start, contig, annotation, samplename, onl
     # print(list(cons.keys())[0],list(cons.keys())[-1],start,len(ref_seq))
 
     for pos in sorted(cons):
-        annotation_pos = get_annotation2(annotation, pos + 1)
+        annotation_pos = get_all_annotations(annotation, pos + 1)
         if not (annotation_pos == "" and only_target_regions):
             # if len(ref_seq)<(pos-start+1):
             #     print("error",contig,start,ref_seq)

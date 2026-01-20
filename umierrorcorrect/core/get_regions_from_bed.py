@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import warnings
 from pathlib import Path
 
 import pysam
@@ -58,16 +59,41 @@ def merge_regions(regions: RegionDict, pos_threshold: int) -> RegionDict:
     return newregions
 
 
-def get_annotation(regions: list[tuple[int, int, str]], pos: int) -> str:
-    """Get annotation for a position from a list of regions."""
+def get_first_annotation(regions: list[tuple[int, int, str]], pos: int) -> str:
+    """Get first matching annotation for a position from a list of regions.
+
+    .. deprecated::
+        This function is not used in production code. Consider using
+        `get_all_annotations` instead which returns all matching annotations.
+
+    Args:
+        regions: List of (start, end, name) tuples defining annotated regions.
+        pos: Position to look up.
+
+    Returns:
+        Name of the first matching region, or empty string if no match.
+    """
+    warnings.warn(
+        "get_first_annotation is deprecated and unused. Use get_all_annotations instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     for start, end, name in regions:
         if pos >= start and pos <= end:
             return name
     return ""
 
 
-def get_annotation2(regions: list[tuple[int, int, str]], pos: int) -> str:
-    """Get all annotations for a position (comma-separated if multiple)."""
+def get_all_annotations(regions: list[tuple[int, int, str]], pos: int) -> str:
+    """Get all annotations for a position (comma-separated if multiple).
+
+    Args:
+        regions: List of (start, end, name) tuples defining annotated regions.
+        pos: Position to look up.
+
+    Returns:
+        Comma-separated string of all matching region names, or empty string if no match.
+    """
     annotation: list[str] = []
     for start, end, name in regions:
         if pos >= start and pos <= end:

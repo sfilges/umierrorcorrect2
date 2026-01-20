@@ -1,8 +1,9 @@
 """Unit tests for umierrorcorrect.core.get_regions_from_bed module."""
 
+import pytest
 from umierrorcorrect.core.get_regions_from_bed import (
-    get_annotation,
-    get_annotation2,
+    get_all_annotations,
+    get_first_annotation,
     get_overlap,
     merge_regions,
     read_bed,
@@ -146,46 +147,55 @@ class TestMergeRegions:
         assert len(merged["chr2"]) == 1
 
 
-class TestGetAnnotation:
-    """Tests for get_annotation function."""
+class TestGetFirstAnnotation:
+    """Tests for get_first_annotation function (deprecated)."""
 
     def test_position_in_region(self, sample_bed_regions):
         """Position inside a region should return its name."""
         regions = sample_bed_regions["chr1"]
 
-        assert get_annotation(regions, 150) == "region1"
-        assert get_annotation(regions, 350) == "region2"
-        assert get_annotation(regions, 500) == "region3"
+        with pytest.warns(DeprecationWarning):
+            assert get_first_annotation(regions, 150) == "region1"
+        with pytest.warns(DeprecationWarning):
+            assert get_first_annotation(regions, 350) == "region2"
+        with pytest.warns(DeprecationWarning):
+            assert get_first_annotation(regions, 500) == "region3"
 
     def test_position_at_boundaries(self, sample_bed_regions):
         """Position at region boundaries should be included."""
         regions = sample_bed_regions["chr1"]
 
-        # At start boundary
-        assert get_annotation(regions, 100) == "region1"
-        # At end boundary
-        assert get_annotation(regions, 200) == "region1"
+        with pytest.warns(DeprecationWarning):
+            # At start boundary
+            assert get_first_annotation(regions, 100) == "region1"
+        with pytest.warns(DeprecationWarning):
+            # At end boundary
+            assert get_first_annotation(regions, 200) == "region1"
 
     def test_position_outside_regions(self, sample_bed_regions):
         """Position outside all regions should return empty string."""
         regions = sample_bed_regions["chr1"]
 
-        assert get_annotation(regions, 50) == ""
-        assert get_annotation(regions, 250) == ""
-        assert get_annotation(regions, 1000) == ""
+        with pytest.warns(DeprecationWarning):
+            assert get_first_annotation(regions, 50) == ""
+        with pytest.warns(DeprecationWarning):
+            assert get_first_annotation(regions, 250) == ""
+        with pytest.warns(DeprecationWarning):
+            assert get_first_annotation(regions, 1000) == ""
 
     def test_empty_regions(self):
         """Empty regions list should return empty string."""
-        assert get_annotation([], 100) == ""
+        with pytest.warns(DeprecationWarning):
+            assert get_first_annotation([], 100) == ""
 
 
-class TestGetAnnotation2:
-    """Tests for get_annotation2 function (returns all overlapping annotations)."""
+class TestGetAllAnnotations:
+    """Tests for get_all_annotations function (returns all overlapping annotations)."""
 
     def test_single_annotation(self, sample_bed_regions):
         """Position in one region should return that region's name."""
         regions = sample_bed_regions["chr1"]
-        result = get_annotation2(regions, 150)
+        result = get_all_annotations(regions, 150)
 
         assert result == "region1"
 
@@ -194,7 +204,7 @@ class TestGetAnnotation2:
         regions = sample_bed_regions_overlapping["chr1"]
 
         # Position 195 is in both region1 (100-200) and region2 (190-300)
-        result = get_annotation2(regions, 195)
+        result = get_all_annotations(regions, 195)
 
         assert "region1" in result
         assert "region2" in result
@@ -202,7 +212,7 @@ class TestGetAnnotation2:
     def test_no_annotation(self, sample_bed_regions):
         """Position outside all regions should return empty string."""
         regions = sample_bed_regions["chr1"]
-        result = get_annotation2(regions, 250)
+        result = get_all_annotations(regions, 250)
 
         assert result == ""
 

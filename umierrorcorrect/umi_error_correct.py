@@ -451,21 +451,6 @@ def split_into_chunks(umi_dict, clusters):
     newdicts.append(newdict)  # add remaining entries
     return newdicts
 
-    # n = 0
-    # i = 0
-    # newdicts = []
-    # b=list(dictname.values())
-    # a=iter(dictname.items())
-    # for count in b:
-    #    n += count
-    #    i += 1
-    #    if n > 100000:
-    #        newdicts.append(dict(islice(a,i))) #add (more than) 100000 raw reads to newdicts (from 0 to index i)
-    #        n = 0
-    #        i = 0
-    # newdicts.append(dict(islice(a,i))) #add remaining entries
-    # return(newdicts)
-
 
 def cluster_umis_all_regions(
     regions,
@@ -573,10 +558,7 @@ def cluster_umis_all_regions(
 
 
 def cluster_umis_on_position(bamfilename, position_threshold, group_method, bedfilename=None):
-    """Function for 0cluster umis on position"""
-    # position_threshold = 20
-    # group_method='fromBed'
-    # group_method='automatic'
+    """Function for clustering UMIs on position."""
     position_threshold = int(position_threshold)
     if group_method == "fromBed":
         regions, ends = read_bam_from_bed(bamfilename, bedfilename, position_threshold)
