@@ -9,7 +9,7 @@ __pycache__/
 # C extensions
 *.so
 
-.results/
+results/
 .vscode/
 .claude/
 CLAUDE.md

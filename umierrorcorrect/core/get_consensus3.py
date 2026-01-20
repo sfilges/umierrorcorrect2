@@ -1,13 +1,9 @@
 #!/usr/bin/env python3
 
 import subprocess
-import sys
 import tempfile
 from collections import Counter
 from itertools import groupby
-
-# from umi_cluster import umi_cluster
-# from collections import Counter
 from math import log10
 
 import pysam
@@ -19,8 +15,6 @@ from umierrorcorrect.core.constants import (
     PHRED_TABLE_SIZE,
     READ_GROUP_TAG,
 )
-from umierrorcorrect.core.group import readBam
-from umierrorcorrect.core.umi_cluster import cluster_barcodes, get_connected_components, merge_clusters
 
 # Pre-computed lookup tables for phred score conversions (avoid repeated 10**x calculations)
 # Phred scores typically range from 0-93 (ASCII 33-126)
@@ -595,28 +589,3 @@ def write_singleton_reads(singleton_matrix, region_id, g):
     for umi, read in singleton_matrix.items():
         read.query_name = f"Singleton_read_{region_id}_{umi}_Count=1"
         g.write(read)
-
-
-def main(bamfilename):
-    contig = "2"
-    start = 29451496
-    # start = 29451684
-    # start=29451796
-    end = 29451946
-    regions, ends = readBam(bamfilename, 60)
-    # print(regions['2'].keys())
-    umi_dict = regions[contig][start]
-    adj_matrix = cluster_barcodes(umi_dict, 1)
-    clusters = get_connected_components(umi_dict, adj_matrix)
-    umis = merge_clusters(umi_dict, clusters)
-    position_matrix, singleton_matrix = get_cons_dict(bamfilename, umis, contig, start, end, True)
-    consensus_seq = get_all_consensus(position_matrix, umis, contig, "0", 60.0, 60.0)
-    with pysam.AlignmentFile(bamfilename, "rb") as f, pysam.AlignmentFile("consensus_out23.bam", "wb", template=f) as g:
-        for cons_read in consensus_seq.values():
-            if cons_read and "TCCTCACG" in cons_read.name:
-                cons_read.write_to_bam(g)
-        # write_singleton_reads(singleton_matrix, '2', g)
-
-
-if __name__ == "__main__":
-    main(sys.argv[1])

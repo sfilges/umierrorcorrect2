@@ -1,21 +1,7 @@
-#!/usr/bin/env python3
-
-import pickle
-import sys
-
-# from umi_cluster import umi_cluster
 from collections import Counter
 
-import pysam
-
 from umierrorcorrect.core.constants import DEFAULT_FAMILY_SIZES, SINGLETON_FAMILY_SIZES
-from umierrorcorrect.core.get_consensus3 import consensus_read, get_ascii, get_most_common_allele, get_reference_sequence
-from umierrorcorrect.core.get_regions_from_bed import (
-    get_annotation2,
-    merge_regions,
-    read_bed,
-    sort_regions,
-)
+from umierrorcorrect.core.get_regions_from_bed import get_annotation2
 
 
 def get_cons_info(consensus_seq, singletons, fsizes=DEFAULT_FAMILY_SIZES):
@@ -257,26 +243,3 @@ def write_consensus(f, cons, ref_seq, start, contig, annotation, samplename, onl
                 line.append(str(freq))
                 line.append(mna)
                 f.write("\t".join(line) + "\n")
-
-
-def main(bamfilename, bedfilename):
-    with open("/home/xsteto/umierrorcorrect/umi.pickle", "rb") as f:
-        umis = pickle.load(f)
-    fasta = pysam.FastaFile("/medstore/External_References/hg19/Homo_sapiens_sequence_hg19.fasta")
-    ref_seq = get_reference_sequence(fasta, "17", 7577495, 7577800)
-    contig = "17"
-    start = 7577495
-    end = 7577800
-    position_matrix, singleton_matrix = get_cons_dict(bamfilename, umis, contig, start, end, True)
-    consensus_seq = get_all_consensus(position_matrix, umis, contig)
-    cons = get_cons_info(consensus_seq, singleton_matrix)
-    regions = read_bed(bedfilename)
-    regions = sort_regions(regions)
-    regions = merge_regions(regions, 0)
-    annotation = regions[contig]
-    with open("out/cons.out", "w") as f:
-        write_consensus(f, cons, ref_seq, start, contig, annotation, False)
-
-
-if __name__ == "__main__":
-    main(sys.argv[1], sys.argv[2])

@@ -15,10 +15,10 @@ import logging
 from pathlib import Path
 
 from umierrorcorrect.call_variants import run_call_variants
+from umierrorcorrect.core.check_args import check_args_fastq, get_sample_name
 from umierrorcorrect.get_consensus_statistics import run_get_consensus_statistics
 from umierrorcorrect.preprocess import run_preprocessing
 from umierrorcorrect.run_mapping import check_bwa_index, run_mapping
-from umierrorcorrect.core.check_args import check_args_fastq, get_sample_name
 from umierrorcorrect.umi_error_correct import run_umi_errorcorrect
 
 

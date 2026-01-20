@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import sys
 from pathlib import Path
 
 import pysam
@@ -103,23 +102,3 @@ def expand_regions_from_bed(regions: RegionDict, bamfile: str) -> RegionDict:
                             maxpos = pos
                 newregions[contig].append((minpos, maxpos, annotation_name))
     return newregions
-
-
-def main(bedfile: str, bamfile: str) -> None:
-    """Main function for testing BED file reading."""
-    regions = read_bed(bedfile)
-    regions = sort_regions(regions)
-    regions = merge_regions(regions, 0)
-    regions = expand_regions_from_bed(regions, bamfile)
-    for c in regions:
-        for r in regions[c]:
-            r2 = tuple(str(x) for x in r)
-            print(c, "\t".join(r2))
-    contig = "17"
-    r = regions[contig]
-    for pos in range(7577077, 7577115):
-        print(pos, get_annotation(r, pos))
-
-
-if __name__ == "__main__":
-    main(sys.argv[1], sys.argv[2])

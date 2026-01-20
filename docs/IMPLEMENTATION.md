@@ -2,19 +2,18 @@
 
 This document outlines a comprehensive plan to modernize the UMIErrorCorrect codebase, improve code quality, and establish proper testing infrastructure.
 
-## Executive Summary
+## Code guidelines
 
-The codebase is functional and well-structured for its purpose (bioinformatics UMI error correction), but shows signs of organic growth without modern Python tooling. Key issues include:
-
-- **No type hints** throughout the codebase
-- **No test suite** (only manual integration testing)
-- **Legacy build system** (setup.py without pyproject.toml)
-- **Security vulnerability** (shell=True in subprocess)
-- **Code quality issues** (long functions, hardcoded values, inconsistent naming)
-
-**Estimated effort:** The full modernization is a significant undertaking. Prioritize by phase.
-
----
+- Uses Python's `multiprocessing.Pool` for parallel region processing
+- All BAM/SAM handling via `pysam` library
+- Regions can be auto-detected from BAM or defined via BED file
+- Version stored in `umierrorcorrect/version.py`
+- Orchestration using `uv`
+- Linting formatting with `ruff`
+- Use `ruff check . --fix` to automatically fix linting errors
+- Use `pydantic` for data validation
+- Use `Path` instead of `os` for file handling
+- Use type hints
 
 ## Phase 1: Modern Build System and Tooling (Foundation)
 
@@ -223,7 +222,7 @@ tests/
 │   ├── test_group.py
 │   ├── test_get_regions_from_bed.py
 │   ├── test_check_args.py
-│   └── test_handle_sequences.py
+│   └── test_read_fastq_records.py
 └── integration/
     ├── __init__.py
     ├── test_preprocess.py
@@ -769,6 +768,7 @@ $ umierrorcorrect filter -i input.bam -o output.bam -c 5
 ```
 
 **Migration steps:**
+
 1. Add `typer[all]` to dependencies in pyproject.toml
 2. Create `cli.py` with Typer app and subcommands
 3. Move argument definitions from each script to `cli.py` as Typer options
@@ -1090,6 +1090,7 @@ def run_parallel(regions, num_workers):
 ```
 
 **Migration steps:**
+
 1. Add `loguru>=0.7.0` to dependencies
 2. Create `umierrorcorrect/logging_config.py`
 3. Add `--verbose`, `--log-file`, `--json-logs` options to CLI
@@ -1161,6 +1162,7 @@ def cluster_barcodes(
 ### 6.2 Update README.md
 
 Add sections for:
+
 - Development setup with uv
 - Running tests
 - Contributing guidelines
@@ -1235,6 +1237,7 @@ Add sections for:
 ## Appendix: Current State Assessment
 
 ### Strengths
+
 - Well-structured pipeline with clear separation of concerns
 - Modular design allows running steps independently
 - Published and validated algorithm (Clinical Chemistry 2022)
@@ -1242,6 +1245,7 @@ Add sections for:
 - Reasonable documentation for end users
 
 ### Weaknesses
+
 - No automated testing (only manual integration test)
 - No type hints (harder to maintain, no IDE support)
 - Legacy build system (setup.py)
@@ -1251,6 +1255,7 @@ Add sections for:
 - Inconsistent code style
 
 ### Risk Assessment
+
 - **High Risk:** Command injection vulnerability could allow arbitrary code execution
 - **Medium Risk:** Lack of tests means regressions go undetected
 - **Low Risk:** Code style issues affect maintainability but not functionality
