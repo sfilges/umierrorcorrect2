@@ -19,11 +19,18 @@ from umierrorcorrect.core.consensus import (
     get_reference_sequence,
     write_singleton_reads,
 )
+from umierrorcorrect.core.constants import DEFAULT_FAMILY_SIZES, HISTOGRAM_SUFFIX
 from umierrorcorrect.core.get_cons_info import calc_major_nonref_allele_frequency, get_cons_info, write_consensus
 from umierrorcorrect.core.get_regions_from_bed import get_overlap, merge_regions, read_bed, sort_regions
 from umierrorcorrect.core.group import read_bam_from_bed, read_bam_from_tag, readBam
 from umierrorcorrect.core.umi_cluster import cluster_barcodes, get_connected_components, merge_clusters
 from umierrorcorrect.core.utils import check_output_directory, get_sample_name
+
+# Column indices for consensus file parsing
+CONS_FILE_POS_COL = 2  # Column index for position
+CONS_FILE_FSIZE_COL = 13  # Column index for family size
+CONS_FILE_ALLELE_START = 5  # Start of allele count columns
+CONS_FILE_ALLELE_END = 15  # End of allele count columns (exclusive)
 
 
 def write_to_json(cons_read):
@@ -104,7 +111,6 @@ def cluster_consensus_worker(args):
     # Generate info for cons file
     cons = get_cons_info(consensus_seq, singleton_matrix)
     consfilename = outfilename.rstrip(".bam") + ".cons"
-    statfilename = outfilename.rstrip(".bam") + ".hist"
     if len(cons) > 0:
         startpos = min(list(cons.keys()))  # take the rightmost coordinate as start
         endpos = max(list(cons.keys())) + 1  # take the leftmost coordinate as end
@@ -114,7 +120,9 @@ def cluster_consensus_worker(args):
             write_consensus(g, cons, ref_seq, startpos, contig, annotations, samplename, False)
     else:  # empty file
         Path(consfilename).touch()
-    # Write to hist/stat file
+
+    # Write to stats file
+    statfilename = outfilename.rstrip(".bam") + HISTOGRAM_SUFFIX
     if len(cons) > 0:
         with Path(statfilename).open("w") as g2:
             name = get_overlap(annotations, start, endpos)
@@ -131,7 +139,7 @@ def cluster_consensus_worker(args):
                 )
                 + "\n"
             )
-    else:  # empty file
+    else:  # Create empty file
         Path(statfilename).touch()
 
 
@@ -242,16 +250,14 @@ def sum_lists(*args):
 def merge_duplicate_positions(args):
     chrx, duppos, cons_file = args
     dupcons = {}
-    a = 13
-    b = 2
     with Path(cons_file).open() as f:
         line = f.readline()
         for line in f:
             parts = line.split("\t")
-            pos = parts[b]
-            contig = parts[b - 1]
+            pos = parts[CONS_FILE_POS_COL]
+            contig = parts[CONS_FILE_POS_COL - 1]
             if contig == chrx and pos in duppos:
-                fsize = parts[a]
+                fsize = parts[CONS_FILE_FSIZE_COL]
                 if pos not in dupcons:
                     dupcons[pos] = {}
                 if fsize not in dupcons[pos]:
@@ -264,16 +270,19 @@ def merge_duplicate_positions(args):
             newpos[pos][fsize] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
             for s in dupcons[pos][fsize]:
                 parts = s.split("\t")
-                newpos[pos][fsize] = [int(a) + int(b) for a, b in zip(newpos[pos][fsize], parts[5:15])]
+                newpos[pos][fsize] = [
+                    int(x) + int(y)
+                    for x, y in zip(newpos[pos][fsize], parts[CONS_FILE_ALLELE_START:CONS_FILE_ALLELE_END])
+                ]
     with Path(cons_file).open() as f, Path(cons_file + "_new" + chrx).open("w") as g:
         line = f.readline()
         g.write(line)
         positions = []
-        fsizes = ["0", "1", "2", "3", "4", "5", "7", "10", "20", "30"]
+        fsizes = [str(x) for x in DEFAULT_FAMILY_SIZES]
         for line in f:
             parts = line.split("\t")
-            pos = parts[b]
-            contig = parts[b - 1]
+            pos = parts[CONS_FILE_POS_COL]
+            contig = parts[CONS_FILE_POS_COL - 1]
             if contig == chrx:
                 if pos not in newpos:
                     g.write(line)
@@ -353,9 +362,9 @@ def merge_tmp_cons_files(chrlist, cons_file):
         Path(filename).unlink()
 
 
-def merge_stat(output_path, statfilelist, sample_name):
+def merge_tmp_stats_files(output_path, statfilelist, sample_name):
     """Merge all stat files in statfilelist and remove temporary files."""
-    output_hist = Path(output_path) / f"{sample_name}.hist"
+    output_hist = Path(output_path) / f"{sample_name}{HISTOGRAM_SUFFIX}"
     with output_hist.open("w") as g:
         for filename in statfilelist:
             with Path(filename).open() as f:
@@ -366,10 +375,15 @@ def merge_stat(output_path, statfilelist, sample_name):
         Path(filename).unlink()
 
 
-def merge_duplicate_stat(output_path, samplename):
+def merge_duplicate_stat(stats_file: Path):
+    """Merge duplicate statistics entries in a stats file.
+
+    Args:
+        stats_file: Path to the stats file to process.
+    """
     convert = lambda text: int(text) if text.isdigit() else text.lower()  # noqa: E731
     alphanum_key = lambda key: [convert(c) for c in re.split("([0-9]+)", key)]  # noqa: E731
-    histfile = Path(output_path) / f"{samplename}.hist"
+    histfile = stats_file
     regions = {}
     # histfile
     with histfile.open() as f:
@@ -686,12 +700,13 @@ def run_umi_errorcorrect(args):
     if args.remove_large_files:
         (output_path / args.bam_file).unlink()
 
-    statfilelist = [x.rstrip(".bam") + ".hist" for x in bamfilelist]
-    merge_stat(args.output_path, statfilelist, args.sample_name)
+    statfilelist = [x.rstrip(".bam") + HISTOGRAM_SUFFIX for x in bamfilelist]
+    merge_tmp_stats_files(args.output_path, statfilelist, args.sample_name)
     duppos = check_duplicate_positions(cons_file)
+    stats_file = output_path / f"{args.sample_name}{HISTOGRAM_SUFFIX}"
     if any(duppos):
         merge_duplicate_positions_all_chromosomes(duppos, cons_file, num_cpus)
-    merge_duplicate_stat(args.output_path, args.sample_name)
+    merge_duplicate_stat(stats_file)
     logging.info(
         f"Consensus generation complete, output written to {args.output_path}/{args.sample_name}_consensus_reads.bam, "
         f"{args.output_path}/{args.sample_name}_cons.tsv"

@@ -16,6 +16,7 @@ from pathlib import Path
 
 from umierrorcorrect.call_variants import run_call_variants
 from umierrorcorrect.core.check_args import check_args_fastq, get_sample_name
+from umierrorcorrect.core.constants import HISTOGRAM_SUFFIX
 from umierrorcorrect.get_consensus_statistics import run_get_consensus_statistics
 from umierrorcorrect.preprocess import run_preprocessing
 from umierrorcorrect.run_mapping import check_bwa_index, run_mapping
@@ -39,7 +40,7 @@ def main(args):
     run_umi_errorcorrect(args)  # run umi errorcorrect
     output_path = Path(args.output_path)
     cons_bam = str(output_path / f"{args.sample_name}_consensus_reads.bam")
-    stat_filename = str(output_path / f"{args.sample_name}.hist")
+    stat_filename = str(output_path / f"{args.sample_name}{HISTOGRAM_SUFFIX}")
     run_get_consensus_statistics(args.output_path, cons_bam, stat_filename, False, args.sample_name)
     args.cons_file = None
     # args.params_file=None

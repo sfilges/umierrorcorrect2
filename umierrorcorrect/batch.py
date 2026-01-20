@@ -16,6 +16,7 @@ from typing import Optional
 from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn
 
+from umierrorcorrect.core.constants import HISTOGRAM_SUFFIX
 from umierrorcorrect.core.logging_config import (
     add_file_handler,
     get_log_path,
@@ -407,7 +408,7 @@ def process_sample(
         # Check for expected output files
         consensus_bam = sample_output_dir / f"{sample.name}_consensus_reads.bam"
         vcf_file = sample_output_dir / f"{sample.name}.vcf"
-        hist_file = sample_output_dir / f"{sample.name}.hist"
+        hist_file = sample_output_dir / f"{sample.name}{HISTOGRAM_SUFFIX}"
 
         return ProcessingResult(
             sample_name=sample.name,

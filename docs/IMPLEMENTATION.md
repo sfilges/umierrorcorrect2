@@ -302,7 +302,7 @@ def sample_reads():
 | `umi_cluster.py` | `edit_distance()` | Same as above plus insertions/deletions |
 | `umi_cluster.py` | `cluster_barcodes()` | Various distance thresholds, edge cases |
 | `umi_cluster.py` | `get_connected_components()` | Graph connectivity scenarios |
-| `consensus.py` | `getConsensus3()` | Uniform reads, mixed reads, low quality, indels |
+| `consensus.py` | `get_consensus_position_based()` | Uniform reads, mixed reads, low quality, indels |
 | `get_cons_info.py` | `get_cons_info()` | Various coverage depths, variant positions |
 | `get_regions_from_bed.py` | `read_bed()` | Valid BED, empty, malformed |
 | `get_regions_from_bed.py` | `merge_regions()` | Overlapping, adjacent, disjoint regions |
@@ -496,14 +496,14 @@ DEFAULT_INDEL_FREQUENCY: float = 60.0
 
 ### 4.3 Refactor Long Functions
 
-**Target: `consensus.py:getConsensus3()` (170 lines)**
+**Target: `consensus.py:get_consensus_position_based()` (170 lines)**
 
 Split into:
 - `_initialize_consensus_read()` - Set up initial state
 - `_process_alignment_column()` - Handle single column
 - `_apply_quality_thresholds()` - Filter by quality
 - `_build_cigar_string()` - Construct CIGAR
-- `getConsensus3()` - Orchestrate the above
+- `get_consensus_position_based()` - Orchestrate the above
 
 **Target: `umi_error_correct.py:cluster_consensus_worker()` (70 lines)**
 
@@ -958,7 +958,7 @@ from umierrorcorrect.logging_config import get_logger
 logger = get_logger(__name__)
 
 
-def getConsensus3(reads, contig, regionid, ...):
+def get_consensus_position_based(reads, contig, regionid, ...):
     """Generate consensus sequence from reads."""
     logger.debug(f"Processing region {contig}:{regionid} with {len(reads)} reads")
 
@@ -1016,7 +1016,7 @@ SUCCESS  | Pipeline completed successfully
 
 # Very verbose (-vv = DEBUG)
 $ umierrorcorrect run -vv -r1 reads_R1.fq.gz ...
-DEBUG    | consensus:getConsensus3:45 - Processing region chr1:12345 with 150 reads
+DEBUG    | consensus:get_consensus_position_based:45 - Processing region chr1:12345 with 150 reads
 DEBUG    | umi_error_correct:cluster_consensus_worker:89 - Worker processing chr1:12345 with 23 UMIs
 ...
 

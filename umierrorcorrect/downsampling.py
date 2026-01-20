@@ -4,6 +4,7 @@
 This module provides functions for generating downsampling analysis plots
 and statistics to assess sequencing depth and UMI family coverage.
 """
+
 import logging
 import random
 from collections import Counter
@@ -12,6 +13,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
+from umierrorcorrect.core.constants import DEFAULT_FAMILY_SIZES, HISTOGRAM_SUFFIX
 from umierrorcorrect.get_consensus_statistics import (
     get_stat,
     region_cons_stat,
@@ -83,16 +85,31 @@ def downsample_reads_per_region(hist, _fraction, fsizes, onlyNamed=True):
         if onlyNamed and h.name == "":
             run_analysis = False
         if run_analysis:
+            # hist: list of family sizes (e.g., [5, 3, 10, 2] means 4 families with 5, 3, 10, and 2 reads)
+            # singletons: number of singletons
             num_families = len(h.hist)
+            # tmpnames: list of family indices (e.g., [0, 1, 2, 3])
             tmpnames = np.array(range(0, num_families))
+
+            # singnames: list of singleton indices (e.g., [3, 4])
             singnames = list(range(num_families, num_families + h.singletons))
+
+            # Convert to np.array
             times = np.array(h.hist)
+
+            # Expand the temp names by the number of reads per family
+            # Result: [0,0,0,0,0, 1,1,1, 2,2,2,2,2,2,2,2,2,2]
+            # (5 reads from family 0, 3 from family 1, 10 from family 2)
             reads = np.repeat(tmpnames, times, axis=0)  # expand to one entry per read
             reads = list(reads) + singnames
             results = {}
             for r in downsample_rates:
+                # At 50% (r=0.5), we'd sample 10 random reads out of 20 total. Let's say we get:
+                # ds_reads = [0, 0, 0, 1, 2, 2, 2, 2, 2, 3]
                 ds_reads = random.sample(list(reads), round(r * len(reads)))  # noqa: S311 - downsample
                 new_hist = Counter(ds_reads).values()  # collapse to one entry per UMI family
+                # Counter: {0: 3, 1: 1, 2: 5, 3: 1}
+                # new_hist = [3, 1, 5, 1] (sorted descending: [5, 3, 1, 1])
                 new_hist = sorted(new_hist, reverse=True)  # sort
                 new_singletons = list(new_hist).count(1)  # count singletons in new
                 new_stat = region_cons_stat(h.regionid, h.pos, h.name, new_singletons, h.fsizes)
@@ -114,16 +131,19 @@ def run_downsampling(output_path, consensus_filename, stat_filename, fsize, samp
     """
     logging.info("Getting consensus statistics")
     out_path = Path(output_path)
+
     if not consensus_filename:
         consensus_filename = str(list(out_path.glob("*_consensus_reads.bam"))[0])
     if not samplename:
         samplename = Path(consensus_filename).name.replace("_consensus_reads.bam", "")
     if not stat_filename:
-        stat_filename = str(out_path / f"{samplename}.hist")
+        stat_filename = str(out_path / f"{samplename}{HISTOGRAM_SUFFIX}")
+
     hist = get_stat(consensus_filename, stat_filename)
-    fsizes = [1, 2, 3, 4, 5, 7, 10, 20, 30]
+    fsizes = list(DEFAULT_FAMILY_SIZES)[1:]  # Exclude 0, which is handled separately
     tot_results = region_cons_stat("All", "all_regions", "", 0, fsizes)
     for h in hist:
+        # print(h.hist)
         tot_results.hist = tot_results.hist + h.hist
         tot_results.singletons += h.singletons
 

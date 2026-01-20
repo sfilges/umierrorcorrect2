@@ -3,8 +3,10 @@ from pathlib import Path
 
 import pysam
 
+from umierrorcorrect.core.constants import DEFAULT_FAMILY_SIZES_STR
 
-def filter_cons(filename, raw_depth_cutoff=150, fsizes="0,1,2,3,4,5,7,10,20,30", writeraw=False):
+
+def filter_cons(filename, raw_depth_cutoff=150, fsizes=DEFAULT_FAMILY_SIZES_STR, writeraw=False):
     outfilename = filename.replace("_cons.tsv", "_filtered_cons.tsv")
     fs = fsizes.split(",")
     with Path(filename).open() as f, Path(outfilename).open("w") as g:

@@ -329,7 +329,9 @@ def _build_consensus_dict(group_seqs):
     return consensus
 
 
-def getConsensus3(group_seqs, contig, regionid, indel_freq_threshold, umi_info, consensus_freq_threshold, output_json):
+def get_consensus_position_based(
+    group_seqs, contig, regionid, indel_freq_threshold, umi_info, consensus_freq_threshold, output_json
+):
     """Takes a list of pysam entries (rows in the BAM file) as input and generates a consensus sequence."""
     consensus = _build_consensus_dict(group_seqs)
     if len(consensus) > 0:
@@ -337,16 +339,16 @@ def getConsensus3(group_seqs, contig, regionid, indel_freq_threshold, umi_info, 
         consensus_sorted = sorted(consensus)
         consread = None
         add_consensus = True
-        skippos = []  # if position is del
+        deletion_skip_positions = []  # positions to skip due to deletions
         prevpos = consensus_sorted[0] - 1
         for pos in sorted(consensus_sorted):
-            if pos not in skippos:
+            if pos not in deletion_skip_positions:
                 poscov = get_position_coverage(consensus[pos])
                 if not consread:
                     consread = consensus_read(contig, regionid, pos, umi_info.centroid, umi_info.count)
-                if not pos == prevpos + 1 and prevpos + 1 not in skippos:
+                if not pos == prevpos + 1 and prevpos + 1 not in deletion_skip_positions:
                     for i in range(prevpos + 1, pos):
-                        if i not in skippos:
+                        if i not in deletion_skip_positions:
                             consread.add_base("N", get_ascii(0))
                     consread.split_read(prevpos + 1, pos)
                 if "I" in consensus[pos] and poscov >= 2:
@@ -369,15 +371,15 @@ def getConsensus3(group_seqs, contig, regionid, indel_freq_threshold, umi_info, 
 
                 elif "D" in consensus[pos] and poscov >= 2:
                     # add the deletions
-                    a, percent = get_most_common_allele(consensus[pos])
-                    if a.startswith("D"):
+                    allele, percent = get_most_common_allele(consensus[pos])
+                    if allele.startswith("D"):
                         if percent >= indel_freq_threshold:
-                            dellength = int(a.lstrip("D"))
+                            dellength = int(allele.lstrip("D"))
                             # print(dellength)
                             consread.add_deletion(dellength)
                             if dellength > 1:
                                 for i in range(1, dellength):
-                                    skippos.append(pos + i)
+                                    deletion_skip_positions.append(pos + i)
                         else:
                             consread.add_base("N", get_ascii(0))
                             add_consensus = False
@@ -514,7 +516,7 @@ def get_all_consensus(
     """Get the consensus sequences for all umis"""
     consensuses = {}
     for umi in position_matrix:
-        consensuses[umi] = getConsensus3(
+        consensuses[umi] = get_consensus_position_based(
             position_matrix[umi],
             contig,
             regionid,

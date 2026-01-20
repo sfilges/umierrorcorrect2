@@ -4,11 +4,14 @@
 This module provides functions for calculating and reporting statistics
 from consensus BAM files and histogram data.
 """
+
 import logging
 from collections import Counter
 from pathlib import Path
 
 import pysam
+
+from umierrorcorrect.core.constants import DEFAULT_FAMILY_SIZES, HISTOGRAM_SUFFIX
 
 
 class region_cons_stat:
@@ -65,7 +68,28 @@ class region_cons_stat:
         return "\n".join(lines)
 
 
-def get_stat(consensus_filename, stat_filename):
+def get_stat(consensus_filename: Path, stat_filename: Path) -> list:
+    """
+    Get consensus statistics per region from consensus BAM file and stat file.
+
+    Parameters
+    ----------
+    consensus_filename : Path
+        Path to consensus BAM file.
+    stat_filename : Path
+        Path to stat file.
+
+    Returns
+    -------
+    list
+        List of region statistics.
+    """
+
+    # ---------------------------------------------------------------
+    # Get regions from stat file
+    # ---------------------------------------------------------------
+    # TODO: Should this include only regions with names if any are present, i.e. if a bed file was used? On the other hand
+    # non-annotated regions contain off-target reads which may be interesting to retain for downstream analysis.
     with Path(stat_filename).open() as f:
         regions = []
         for line in f:
@@ -75,23 +99,33 @@ def get_stat(consensus_filename, stat_filename):
             regionid = str(regionid)
             regions.append((regionid, pos, singles, name))
 
-    # print(regions)
-    hist = {}
+    # ---------------------------------------------------------------
+    # Read consensus BAM file and get consensus read histograms
+    # ---------------------------------------------------------------
+
+    # Read names have the structure: type_read_regionid_umi_Count=number
+    # singletons: Singleton_read_7_GTCGAAACTAGA_Count=1
+    # consensus: Consensus_read_7_TGATAAAATAAG_a_Count=8
+    # What do the a, b, c, etc. tags before counts mean? Likely subclusters from UMI clustering.
+    family_sizes_by_region = {}
     with pysam.AlignmentFile(consensus_filename, "rb") as f:
         reads = f.fetch()
         for read in reads:
             idx = read.qname
             if idx.startswith("Consensus_read"):
+                # ['Consensus', 'read', '7', 'TGATAAAATAAG', 'a', 'Count=8']
                 parts = idx.split("_")
                 regionid = str(parts[2])
-                # regionid='_'.join(parts[2:-2])
                 if parts[-1].startswith("Count") or parts[-1] == "a":
                     count = int(idx.split("=")[-1])
-                    if regionid not in hist:
-                        hist[regionid] = []
-                    hist[regionid].append(count)
-    # print(hist)
-    fsizes = [1, 2, 3, 4, 5, 7, 10, 20, 30]
+                    if regionid not in family_sizes_by_region:
+                        family_sizes_by_region[regionid] = []
+                    # Dictionary with regionid as key and list of counts as value
+                    # family_sizes_by_region = {regionid: [count, count, count, ...]}
+                    # len(family_sizes_by_region[regionid]) = number of consensus reads per region
+                    family_sizes_by_region[regionid].append(count)
+
+    fsizes = list(DEFAULT_FAMILY_SIZES)[1:]  # Exclude 0, which is handled separately
     regionstats = []
     for regionid, pos, singletons, name in regions:
         if "-" in regionid:
@@ -109,17 +143,16 @@ def get_stat(consensus_filename, stat_filename):
             stat = region_cons_stat(regionid, pos, name, singletons, fsizes)
             for i in range(int(a), int(b) + 1):
                 if not from_tag:
-                    if str(i) in hist:
-                        stat.add_histogram(hist[str(i)], fsizes)
+                    if str(i) in family_sizes_by_region:
+                        stat.add_histogram(family_sizes_by_region[str(i)], fsizes)
                 else:
-                    if name + "_" + str(i) in hist:
-                        stat.add_histogram(hist[name + "_" + str(i)], fsizes)
-            # print(stat.write_stats())
+                    if name + "_" + str(i) in family_sizes_by_region:
+                        stat.add_histogram(family_sizes_by_region[name + "_" + str(i)], fsizes)
             regionstats.append(stat)
         else:
             stat = region_cons_stat(regionid, pos, name, singletons, fsizes)
-            if regionid in hist:
-                stat.add_histogram(hist[regionid], fsizes)
+            if regionid in family_sizes_by_region:
+                stat.add_histogram(family_sizes_by_region[regionid], fsizes)
             regionstats.append(stat)
     return regionstats
 
@@ -185,9 +218,9 @@ def run_get_consensus_statistics(output_path, consensus_filename, stat_filename,
     if not samplename:
         samplename = Path(consensus_filename).name.replace("_consensus_reads.bam", "")
     if not stat_filename:
-        stat_filename = str(out_path / f"{samplename}.hist")
+        stat_filename = str(out_path / f"{samplename}{HISTOGRAM_SUFFIX}")
     hist = get_stat(consensus_filename, stat_filename)
-    fsizes = [1, 2, 3, 4, 5, 7, 10, 20, 30]
+    fsizes = list(DEFAULT_FAMILY_SIZES)[1:]  # Exclude 0, which is handled separately
     histall = get_overall_statistics(hist, fsizes)
     if not consensus_filename:
         consensus_filename = str(list(out_path.glob("*_consensus_reads.bam"))[0])

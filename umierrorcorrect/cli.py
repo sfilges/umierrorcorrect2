@@ -7,6 +7,7 @@ from typing import Annotated, Optional
 import typer
 from rich.console import Console
 
+from umierrorcorrect.core.constants import DEFAULT_FAMILY_SIZES_STR
 from umierrorcorrect.core.logging_config import add_file_handler, get_log_path, get_logger, setup_logging
 from umierrorcorrect.version import __version__
 
@@ -222,7 +223,7 @@ def consensus(
 def stats(
     output: Annotated[Path, typer.Option("-o", "--output", help="Path to output directory.")],
     cons_bam: Annotated[Optional[Path], typer.Option("-c", "--cons-bam", help="Path to consensus BAM file.")] = None,
-    hist_file: Annotated[Optional[Path], typer.Option("--hist", help="Path to histogram file.")] = None,
+    stats_file: Annotated[Optional[Path], typer.Option("--stats", help="Path to consensus statistics file.")] = None,
     sample_name: Annotated[Optional[str], typer.Option("-s", "--sample-name", help="Sample name.")] = None,
     output_raw: Annotated[bool, typer.Option("--raw", help="Output raw consensus group counts.")] = False,
 ) -> None:
@@ -239,7 +240,7 @@ def stats(
     run_get_consensus_statistics(
         str(output),
         str(cons_bam) if cons_bam else None,
-        str(hist_file) if hist_file else None,
+        str(stats_file) if stats_file else None,
         output_raw,
         sample_name,
     )
@@ -340,7 +341,7 @@ def filter_cons(
     depth: Annotated[int, typer.Option("-d", "--depth", help="Raw depth cutoff.")] = 150,
     family_sizes: Annotated[
         str, typer.Option("-f", "--family-sizes", help="Family sizes to include, comma-separated.")
-    ] = "0,1,2,3,4,5,7,10,20,30",
+    ] = DEFAULT_FAMILY_SIZES_STR,
     write_raw: Annotated[bool, typer.Option("--write-raw", help="Include raw reads in output.")] = False,
 ) -> None:
     """Filter consensus file by depth and family sizes."""
@@ -355,7 +356,7 @@ def filter_cons(
 def downsampling(
     output: Annotated[Path, typer.Option("-o", "--output", help="Path to output directory.")],
     cons_bam: Annotated[Optional[Path], typer.Option("-c", "--cons-bam", help="Path to consensus BAM file.")] = None,
-    hist_file: Annotated[Optional[Path], typer.Option("--hist", help="Path to histogram file.")] = None,
+    stats_file: Annotated[Optional[Path], typer.Option("--stats", help="Path to consensus statistics file.")] = None,
     sample_name: Annotated[Optional[str], typer.Option("-s", "--sample-name", help="Sample name.")] = None,
     fsize: Annotated[int, typer.Option("-f", "--fsize", help="Family size cutoff for downsampling.")] = 3,
 ) -> None:
@@ -372,7 +373,7 @@ def downsampling(
     run_downsampling(
         str(output),
         str(cons_bam) if cons_bam else None,
-        str(hist_file) if hist_file else None,
+        str(stats_file) if stats_file else None,
         fsize,
         sample_name,
     )

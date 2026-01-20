@@ -53,8 +53,11 @@ CONSENSUS_BAM_SUFFIX = "_consensus_reads.bam"
 CONSENSUS_TSV_SUFFIX = "_cons.tsv"
 """Suffix for consensus TSV output files."""
 
-HISTOGRAM_SUFFIX = ".hist"
-"""Suffix for UMI family size histogram files."""
+HISTOGRAM_SUFFIX = "_consensus_stats.tsv"
+"""Suffix for consensus statistics files (previously .hist)."""
+
+DEFAULT_FAMILY_SIZES_STR = ",".join(str(x) for x in DEFAULT_FAMILY_SIZES)
+"""String version of DEFAULT_FAMILY_SIZES for CLI defaults."""
 
 # =============================================================================
 # BAM Tags
