@@ -5,37 +5,7 @@ import numpy as np
 from scipy.optimize import fmin
 from scipy.stats import beta
 
-
-def parse_cons_file(filename, fsize=3):
-    n1 = []
-    f1 = []
-    c1 = []
-    posx = []
-    data = []
-    with Path(filename).open() as f:
-        for line in f:
-            if not line.startswith("Sample Name"):
-                line = line.rstrip("\n")
-                parts = line.split("\t")
-                pos = parts[1] + ":" + parts[2]
-                name = parts[3]
-                # print(name)
-                if name not in "":
-                    famsize = parts[-4]
-                    if int(famsize) == fsize:
-                        frac = float(parts[-2])
-                        alt = parts[-1]
-                        count = parts[-3]
-                        if frac > 0 and alt not in "N":
-                            cov = int(parts[-5])
-                            f1.append(float(frac))
-                            n1.append(int(cov))
-                            c1.append(int(count))
-                            posx.append(pos)
-                            data.append(line)
-                # print(name)
-                # print(famsize)
-    return (f1, n1, c1, posx, data)
+from umierrorcorrect.core.utils import parse_cons_file
 
 
 def betaNLL(params, *args):
@@ -72,7 +42,7 @@ def run_fit_bgmodel(args):
     if not args.cons_file:
         args.cons_file = str(list(Path(args.output_path).glob("*cons.tsv"))[0])
     args.fsize = int(args.fsize)
-    f1, n1, a1, pos, data = parse_cons_file(args.cons_file, args.fsize)
+    f1, n1, a1, pos, data = parse_cons_file(args.cons_file, args.fsize, include_position=True)
     f1 = np.array(f1)
     n1 = np.array(n1)
     a1 = np.array(a1)

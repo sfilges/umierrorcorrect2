@@ -302,7 +302,7 @@ def sample_reads():
 | `umi_cluster.py` | `edit_distance()` | Same as above plus insertions/deletions |
 | `umi_cluster.py` | `cluster_barcodes()` | Various distance thresholds, edge cases |
 | `umi_cluster.py` | `get_connected_components()` | Graph connectivity scenarios |
-| `get_consensus3.py` | `getConsensus3()` | Uniform reads, mixed reads, low quality, indels |
+| `consensus.py` | `getConsensus3()` | Uniform reads, mixed reads, low quality, indels |
 | `get_cons_info.py` | `get_cons_info()` | Various coverage depths, variant positions |
 | `get_regions_from_bed.py` | `read_bed()` | Valid BED, empty, malformed |
 | `get_regions_from_bed.py` | `merge_regions()` | Overlapping, adjacent, disjoint regions |
@@ -496,7 +496,7 @@ DEFAULT_INDEL_FREQUENCY: float = 60.0
 
 ### 4.3 Refactor Long Functions
 
-**Target: `get_consensus3.py:getConsensus3()` (170 lines)**
+**Target: `consensus.py:getConsensus3()` (170 lines)**
 
 Split into:
 - `_initialize_consensus_read()` - Set up initial state
@@ -952,7 +952,7 @@ def run(
 **Usage in core modules:**
 
 ```python
-# umierrorcorrect/src/get_consensus3.py
+# umierrorcorrect/src/consensus.py
 from umierrorcorrect.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -1016,7 +1016,7 @@ SUCCESS  | Pipeline completed successfully
 
 # Very verbose (-vv = DEBUG)
 $ umierrorcorrect run -vv -r1 reads_R1.fq.gz ...
-DEBUG    | get_consensus3:getConsensus3:45 - Processing region chr1:12345 with 150 reads
+DEBUG    | consensus:getConsensus3:45 - Processing region chr1:12345 with 150 reads
 DEBUG    | umi_error_correct:cluster_consensus_worker:89 - Worker processing chr1:12345 with 23 UMIs
 ...
 

@@ -9,29 +9,6 @@ import pysam
 from umierrorcorrect.core.logging_config import log_subprocess_stderr
 
 
-def check_output_directory(outdir):
-    """Check if outdir exists, otherwise create it"""
-    outdir_path = Path(outdir)
-    if outdir_path.is_dir():
-        return outdir
-    else:
-        outdir_path.mkdir()
-        return outdir
-
-
-def get_sample_name(read1, mode):
-    """Get the sample name as the basename of the input files."""
-    if mode == "single":
-        if "_umis_in_header" in read1:
-            read1 = read1.replace("_umis_in_header", "")
-        samplename = read1.split("/")[-1].rstrip("fastq").rstrip("fastq.gz")
-    elif mode == "paired":
-        if "_umis_in_header" in read1:
-            read1 = read1.replace("_umis_in_header", "")
-        samplename = read1.split("/")[-1].rstrip("fastq").rstrip("fastq.gz").rstrip("_R012")
-    return samplename
-
-
 def check_bwa_index(reference_file):
     """Check if BWA index files exists, otherwise create"""
     ref_path = Path(reference_file)

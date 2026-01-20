@@ -6,35 +6,7 @@ import numpy as np
 from numpy import inf
 from scipy.stats import betabinom
 
-
-def parse_cons_file(filename, fsize=3):
-    n1 = []
-    f1 = []
-    c1 = []
-    data = []
-    encoding = "iso-8859-1"
-    with Path(filename).open(encoding=encoding) as f:
-        f.readline()
-        for line in f:
-            line = line.rstrip("\n")
-            parts = line.split("\t")
-            name = parts[3]
-            # print(name)
-            if name not in "":
-                famsize = parts[-4]
-                if int(famsize) == fsize:
-                    frac = float(parts[-2])
-                    alt = parts[-1]
-                    count = parts[-3]
-                    if frac > 0 and alt not in "N":
-                        cov = int(parts[-5])
-                        f1.append(float(frac))
-                        n1.append(int(cov))
-                        c1.append(int(count))
-                        data.append(line)
-                # print(name)
-                # print(famsize)
-    return (f1, n1, c1, data)
+from umierrorcorrect.core.utils import get_sample_name_from_cons, parse_cons_file
 
 
 def write_vcf(vcffile, rout, Qsig, reference):
@@ -89,18 +61,11 @@ def plot_histogram(hist, plot_filename):
     plt.savefig(plot_filename)
 
 
-def get_sample_name(cons_name):
-    """Get the sample name as the basename of the input files."""
-    sample_name = cons_name.split("/")[-1]
-    sample_name = sample_name.replace("_cons.tsv", "")
-    return sample_name
-
-
 def run_call_variants(args):
     if not args.cons_file:
         args.cons_file = str(list(Path(args.output_path).glob("*cons.tsv"))[0])
     if not args.sample_name:
-        args.sample_name = get_sample_name(args.cons_file)
+        args.sample_name = get_sample_name_from_cons(args.cons_file)
     args.fsize = int(args.fsize)
     f1, n1, a1, data = parse_cons_file(args.cons_file, args.fsize)
     f1 = np.array(f1)

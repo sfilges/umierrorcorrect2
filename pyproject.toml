@@ -82,22 +82,22 @@ fixable = ["ALL"]
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101", "ARG", "S311"] # S311: random ok for test data
 "umierrorcorrect/cli.py" = ["ARG001"] # version arg used by typer callback
-"umierrorcorrect/src/get_consensus3.py" = [
+"umierrorcorrect/core/consensus.py" = [
     "ARG001",
     "SIM108",
     "SIM201",
     "B007",
 ] # ref arg part of function signature; ternary would reduce readability
-"umierrorcorrect/src/get_cons_info.py" = [
+"umierrorcorrect/core/get_cons_info.py" = [
     "ARG001",
     "SIM201",
     "SIM108",
     "PTH123",
 ] # indel_freq args part of API; debug code in __main__
-"umierrorcorrect/src/check_args.py" = [
+"umierrorcorrect/core/check_args.py" = [
     "SIM102",
 ] # nested if is clearer for validation errors
-"umierrorcorrect/src/umi_cluster.py" = [
+"umierrorcorrect/core/umi_cluster.py" = [
     "PTH123",
 ] # hardcoded debug paths in __main__ block
 "umierrorcorrect/umi_error_correct.py" = [

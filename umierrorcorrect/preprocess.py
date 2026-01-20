@@ -20,16 +20,7 @@ from pathlib import Path
 from umierrorcorrect.core.check_args import check_args_fastq
 from umierrorcorrect.core.logging_config import log_subprocess_stderr
 from umierrorcorrect.core.read_fastq_records import read_fastq, read_fastq_paired_end
-
-
-def check_output_directory(outdir):
-    """Check if outdir exists, otherwise create it"""
-    outdir_path = Path(outdir)
-    if outdir_path.is_dir():
-        return outdir
-    else:
-        outdir_path.mkdir()
-        return outdir
+from umierrorcorrect.core.utils import check_output_directory
 
 
 def generate_random_dir(tmpdir):

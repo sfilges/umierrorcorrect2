@@ -11,8 +11,7 @@ from pathlib import Path
 
 import pysam
 
-from umierrorcorrect.core.get_cons_info import calc_major_nonref_allele_frequency, get_cons_info, write_consensus
-from umierrorcorrect.core.get_consensus3 import (
+from umierrorcorrect.core.consensus import (
     get_all_consensus,
     get_all_consensus_most_common,
     get_all_consensus_msa,
@@ -20,28 +19,11 @@ from umierrorcorrect.core.get_consensus3 import (
     get_reference_sequence,
     write_singleton_reads,
 )
+from umierrorcorrect.core.get_cons_info import calc_major_nonref_allele_frequency, get_cons_info, write_consensus
 from umierrorcorrect.core.get_regions_from_bed import get_overlap, merge_regions, read_bed, sort_regions
 from umierrorcorrect.core.group import read_bam_from_bed, read_bam_from_tag, readBam
 from umierrorcorrect.core.umi_cluster import cluster_barcodes, get_connected_components, merge_clusters
-
-
-def check_output_directory(outdir):
-    """Check if outdir exists, otherwise create it"""
-    outdir_path = Path(outdir)
-    if outdir_path.is_dir():
-        return outdir
-    else:
-        outdir_path.mkdir()
-        return outdir
-
-
-def get_sample_name(bamfile):
-    """Get the sample name as the basename of the input files."""
-    sample_name = bamfile.split("/")[-1]
-    if ".sorted" in sample_name:
-        sample_name = sample_name.replace(".sorted", "")
-    sample_name = sample_name.replace(".bam", "")
-    return sample_name
+from umierrorcorrect.core.utils import check_output_directory, get_sample_name
 
 
 def write_to_json(cons_read):
