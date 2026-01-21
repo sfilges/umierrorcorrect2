@@ -39,7 +39,7 @@ Input: FASTQ R1 (+ R2 for paired-end)
                     ▼
         ┌───────────────────────┐
         │   BWA MAPPING         │
-        │   (run_mapping)       │
+        │   (align_bwa)       │
         └───────────────────────┘
                     │
                     ▼
@@ -364,7 +364,7 @@ dev = [
 [project.scripts]
 run_umierrorcorrect = "umierrorcorrect.run_umierrorcorrect:main_cli"
 preprocess = "umierrorcorrect.preprocess:main_cli"
-run_mapping = "umierrorcorrect.run_mapping:main_cli"
+align_bwa = "umierrorcorrect.align:main_cli"
 umi_error_correct = "umierrorcorrect.umi_error_correct:main_cli"
 get_consensus_statistics = "umierrorcorrect.get_consensus_statistics:main_cli"
 call_variants = "umierrorcorrect.call_variants:main_cli"
@@ -461,7 +461,7 @@ Add to documentation:
    curl -LsSf https://astral.sh/uv/install.sh | sh
    ```
 
-2. Clone and install:
+1. Clone and install:
 
    ```bash
    git clone https://github.com/stahlberggroup/umierrorcorrect.git
@@ -469,11 +469,12 @@ Add to documentation:
    uv sync --dev
    ```
 
-3. Run tests:
+2. Run tests:
 
    ```bash
    uv run pytest
    ```
+
 ```
 
 ### 1.4 Migration Tasks
@@ -529,7 +530,7 @@ tests/
 └── integration/
     ├── __init__.py
     ├── test_preprocess.py
-    ├── test_run_mapping.py
+    ├── test_align.py
     ├── test_umi_error_correct.py
     ├── test_pipeline.py      # End-to-end pipeline test
     └── test_call_variants.py
@@ -649,12 +650,14 @@ fail_under = 60  # Start low, increase over time
 **Location:** `umierrorcorrect/umi_error_correct.py` lines 227-229
 
 **Current (vulnerable):**
+
 ```python
 command1 = ['sort tmp.txt | uniq -d']
 p1 = subprocess.Popen(command1, shell=True, stdout=g)
 ```
 
 **Fixed:**
+
 ```python
 import shutil
 
@@ -802,6 +805,7 @@ DEFAULT_INDEL_FREQUENCY: float = 60.0
 **Target: `consensus.py:get_consensus_position_based()` (170 lines)**
 
 Split into:
+
 - `_initialize_consensus_read()` - Set up initial state
 - `_process_alignment_column()` - Handle single column
 - `_apply_quality_thresholds()` - Filter by quality
@@ -811,6 +815,7 @@ Split into:
 **Target: `umi_error_correct.py:cluster_consensus_worker()` (70 lines)**
 
 Split into:
+
 - `_cluster_umis()` - Just the clustering logic
 - `_generate_consensus_for_cluster()` - Consensus generation
 - `_write_cluster_output()` - File I/O
@@ -847,6 +852,7 @@ parser = argparse.ArgumentParser(description=f"UmiErrorCorrect v. {__version__}.
 ### 4.6 Remove Python 2 Compatibility Code
 
 Remove from all files:
+
 ```python
 from __future__ import division  # Not needed in Python 3
 ```
@@ -857,7 +863,7 @@ from __future__ import division  # Not needed in Python 3
 |------|------|---------|-------|
 | `run_umierrorcorrect.py` | 44 | "emove the original" | "Remove the original" |
 | `umi_error_correct.py` | 54 | "emove the original" | "Remove the original" |
-| `run_mapping.py` | 26 | "emove the original" | "Remove the original" |
+| `align.py` | 26 | "emove the original" | "Remove the original" |
 | `umi_error_correct.py` | 491 | "0cluster umis" | "cluster UMIs" |
 
 ### 4.8 Refactor CLI with Typer + Rich
@@ -872,13 +878,14 @@ Consolidate all CLI argument parsing into a single `cli.py` module using [Typer]
 umierrorcorrect/
 ├── cli.py              # Typer app with subcommands, Rich console output
 ├── preprocess.py       # preprocess() function (no CLI code)
-├── run_mapping.py      # run_mapping() function
+├── align.py      # align_bwa() function
 ├── umi_error_correct.py # umi_error_correct() function
 ├── filter_bam.py       # filter_bam() function
 └── ...
 ```
 
 **Benefits:**
+
 - **Testability:** Core functions can be unit tested without mocking CLI
 - **Programmatic use:** Functions importable from Jupyter notebooks or custom pipelines
 - **Single entry point:** `umierrorcorrect <command>` instead of 10 separate scripts
@@ -1023,7 +1030,7 @@ def run(
 
         # Step 2: Mapping
         progress.update(task, description="[cyan]Mapping to reference...")
-        # run_mapping(...)
+        # align_bwa(...)
         progress.advance(task)
 
         # ... etc
@@ -1085,6 +1092,7 @@ $ umierrorcorrect filter -i input.bam -o output.bam -c 5
 Replace ad-hoc print statements and basic logging with [Loguru](https://github.com/Delgan/loguru) for structured, configurable logging throughout the pipeline.
 
 **Why Loguru over stdlib logging:**
+
 - Zero boilerplate - no handlers, formatters, or config files
 - Automatic exception formatting with full traceback
 - Built-in rotation, retention, and compression
@@ -1243,7 +1251,7 @@ def run(
         # preprocess(...)
 
         logger.info("Mapping to reference")
-        # run_mapping(...)
+        # align_bwa(...)
 
         logger.success("Pipeline completed successfully")
 

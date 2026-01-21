@@ -235,7 +235,7 @@ def mapping(
 ) -> None:
     """Run BWA mapping to reference genome."""
 
-    from umierrorcorrect.run_mapping import check_output_directory, get_sample_name, run_mapping
+    from umierrorcorrect.align import check_output_directory, get_sample_name, align_bwa
 
     output_path = check_output_directory(str(output))
 
@@ -255,7 +255,7 @@ def mapping(
         sample_name = get_sample_name(str(read1), mode)
 
     logger.info("Starting BWA mapping")
-    run_mapping(str(threads), str(reference), fastq_files, output_path, sample_name, remove_files)
+    align_bwa(str(threads), str(reference), fastq_files, output_path, sample_name, remove_files)
     logger.info("Mapping complete!")
 
 

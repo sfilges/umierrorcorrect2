@@ -6,7 +6,7 @@ This module provides the main entry point for running the complete UMI error
 correction pipeline on a single sample.
 
 Pipeline Flow:
-    FASTQ -> preprocess -> run_mapping -> umi_error_correct -> get_consensus_statistics -> call_variants -> VCF
+    FASTQ -> preprocess -> align_bwa -> umi_error_correct -> get_consensus_statistics -> call_variants -> VCF
 
 External Dependencies:
     - bwa: Required for sequence mapping (must have indexed reference genome)
@@ -23,7 +23,7 @@ from umierrorcorrect.core.logging_config import get_logger
 from umierrorcorrect.core.utils import get_sample_name
 from umierrorcorrect.get_consensus_statistics import run_get_consensus_statistics
 from umierrorcorrect.preprocess import run_preprocessing
-from umierrorcorrect.run_mapping import check_bwa_index, run_mapping
+from umierrorcorrect.align import check_bwa_index, align_bwa
 from umierrorcorrect.umi_error_correct import run_umi_errorcorrect
 
 logger = get_logger(__name__)
@@ -96,7 +96,7 @@ def run_pipeline(args):
     # -----------------------------------------
     # Run mapping
     # -----------------------------------------
-    bam_file = run_mapping(
+    bam_file = align_bwa(
         args.num_threads, args.reference_file, fastq_files, args.output_path, args.sample_name, args.remove_large_files
     )
     args.bam_file = bam_file

@@ -45,7 +45,7 @@ def check_bwa_index(reference_file: str | Path) -> None:
             sys.exit(1)
 
 
-def run_mapping(
+def align_bwa(
     num_threads: int,
     reference_file: str | Path,
     fastq_files: list[str | Path],
@@ -53,8 +53,8 @@ def run_mapping(
     sample_name: str,
     remove_large_files: bool,
 ) -> str | None:
-    """Run mapping with bwa to create a SAM file, then convert it to BAM, sort and index the file."""
-    logger.info("Starting mapping with BWA")
+    """Align reads with BWA to create a SAM file, then convert it to BAM, sort and index the file."""
+    logger.info("Starting alignment with BWA")
 
     # Validate inputs
     output_dir = Path(output_path)
@@ -100,5 +100,5 @@ def run_mapping(
         for fastq in fastq_files:
             Path(fastq).unlink()
 
-    logger.info("Finished mapping")
+    logger.info("Finished alignment")
     return str(sorted_bam)

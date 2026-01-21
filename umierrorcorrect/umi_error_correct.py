@@ -146,6 +146,7 @@ def cluster_consensus_worker(args):
 
 
 def update_bam_header(bamfile, samplename):
+    """Update BAM header with sample name"""
     with pysam.AlignmentFile(bamfile, "rb") as f:
         new_header = f.header.copy().to_dict()
         template = {"ID": "L1", "SM": samplename, "LB": samplename, "PL": "ILLUMINA"}
@@ -246,10 +247,12 @@ def check_duplicate_positions(cons_file):
 
 
 def sum_lists(*args):
+    """Sum lists elementwise."""
     return list(map(sum, zip(*args)))
 
 
 def merge_duplicate_positions(args):
+    """Merge duplicate positions in consensus file."""
     chrx, duppos, cons_file = args
     dupcons = {}
     with Path(cons_file).open() as f:
@@ -620,7 +623,6 @@ def run_umi_errorcorrect(args):
     else:
         regions, ends = cluster_umis_on_position(args.bam_file, args.position_threshold, group_method, args.bed_file)
 
-    # print(regions)
     nregions = 0
     for chrx in regions:
         nregions += len(regions[chrx])
@@ -638,7 +640,7 @@ def run_umi_errorcorrect(args):
             bedregions = merge_regions(bedregions, 0)
     else:
         bedregions = {}
-    # print(bedregions)
+
     if group_method == "fromTag":
         bamfilelist = cluster_umis_all_regions(
             regions,

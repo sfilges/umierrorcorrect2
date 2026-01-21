@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 """
-UMI error correct, preprocess.py - remove UMI and append to the header of Fastq sequences.
-================================
+umierrorcorrect, preprocess.py - Preprocess FASTQ sequences.
+============================================================
 
 :Authors: Tobias Osterlund, Stefan Filges
 
 Purpose
 -------
 
-Preprocess the fastq files by removing the unique molecular index and add it to the header of the fastq entry.
+Preprocess FASTQ files for UMI error correction. This module handles:
+1. Quality filtering and adapter trimming (using fastp).
+2. Adapter trimming with cutadapt (optional).
+3. Extraction of Unique Molecular Identifiers (UMIs) from reads and moving them to the read header.
+4. Handling of both single-end and paired-end sequencing data.
 
 """
 
@@ -196,7 +200,7 @@ def run_cutadapt(
     return outfile1, outfile2
 
 
-def preprocess_se(infilename, outfilename, barcode_length, spacer_length):
+def preprocess_se(infilename: str, outfilename: str, barcode_length: int, spacer_length: int) -> int:
     """Run the preprocessing for single end data (one fastq file)."""
     with Path(infilename).open() as f, Path(outfilename).open("w") as g:
         read_start = barcode_length + spacer_length
@@ -211,7 +215,15 @@ def preprocess_se(infilename, outfilename, barcode_length, spacer_length):
     return nseqs
 
 
-def preprocess_pe(r1file, r2file, outfile1, outfile2, barcode_length, spacer_length, dual_index):
+def preprocess_pe(
+    r1file: str,
+    r2file: str,
+    outfile1: str,
+    outfile2: str,
+    barcode_length: int,
+    spacer_length: int,
+    dual_index: bool,
+) -> int:
     """Run the preprocessing for paired end data (two fastq files)."""
     read_start = barcode_length + spacer_length
     with (
@@ -237,6 +249,119 @@ def preprocess_pe(r1file, r2file, outfile1, outfile2, barcode_length, spacer_len
             else:
                 g2.write("\n".join([newname2, seq2, "+", qual2]) + "\n")
     return 2 * nseqs
+
+def prepare_input_files(
+    input_read1: Path,
+    input_read2: Optional[Path],
+    effective_mode: str,
+    tmpdir: str,
+    num_threads: int,
+    gziptool: str,
+) -> tuple[str, Optional[str], bool]:
+    """Unzip input files if necessary.
+
+    Args:
+        input_read1: Path to first input file.
+        input_read2: Path to second input file (optional).
+        effective_mode: "single" or "paired".
+        tmpdir: Directory for temporary files.
+        num_threads: Number of threads for pigz.
+        gziptool: "pigz" or "gzip".
+
+    Returns:
+        Tuple of (r1file path, r2file path, removerfiles flag).
+    """
+    if not str(input_read1).endswith("gz"):
+        r1file = str(input_read1)
+        removerfiles = False
+        r2file = str(input_read2) if input_read2 else None
+
+        if effective_mode == "paired" and not input_read2:
+            raise ValueError("Read2 not provided in paired mode")
+    else:
+        removerfiles = True
+        if effective_mode == "paired":
+            if not input_read2:
+                raise ValueError("Read2 not provided in paired mode")
+            r1file = run_unpigz(str(input_read1), tmpdir, num_threads, gziptool)
+            r2file = run_unpigz(str(input_read2), tmpdir, num_threads, gziptool)
+        else:
+            r1file = run_unpigz(str(input_read1), tmpdir, num_threads, gziptool)
+            r2file = None
+
+    return r1file, r2file, removerfiles
+
+
+def process_umi_extraction(
+    r1file: str,
+    r2file: Optional[str],
+    effective_mode: str,
+    config: PreprocessConfig,
+    removerfiles: bool,
+    tmpdir: str,
+) -> tuple[list[str], int]:
+    """Extract UMIs and cleanup temporary files.
+
+    Args:
+        r1file: Path to R1 file (unzipped).
+        r2file: Path to R2 file (unzipped, optional).
+        effective_mode: "single" or "paired".
+        config: Preprocess config.
+        removerfiles: Whether to remove input files after processing.
+        tmpdir: Temporary directory path.
+
+    Returns:
+        Tuple of (list of output FASTQ files, number of sequences).
+    """
+    output_path = Path(config.output_path)
+
+    if effective_mode == "single":
+        outfilename = str(output_path / f"{config.sample_name}_umis_in_header.fastq")
+        nseqs = preprocess_se(r1file, outfilename, config.umi_length, config.spacer_length)
+        run_pigz(outfilename, config.num_threads, config.gziptool)
+
+        if removerfiles:
+            Path(r1file).unlink()
+        Path(tmpdir).rmdir()
+        fastqfiles = [f"{outfilename}.gz"]
+
+    else:
+        if r2file is None:
+            raise ValueError("r2file is None in paired mode")
+
+        if config.reverse_index:
+            # switch forward and reverse read
+            r1filetmp = r1file
+            r1file = r2file
+            r2file = r1filetmp
+            outfile1 = str(output_path / f"{config.sample_name}_R2_umis_in_header.fastq")
+            outfile2 = str(output_path / f"{config.sample_name}_R1_umis_in_header.fastq")
+        else:
+            outfile1 = str(output_path / f"{config.sample_name}_R1_umis_in_header.fastq")
+            outfile2 = str(output_path / f"{config.sample_name}_R2_umis_in_header.fastq")
+
+        nseqs = preprocess_pe(
+            r1file,
+            r2file,
+            outfile1,
+            outfile2,
+            config.umi_length,
+            config.spacer_length,
+            config.dual_index,
+        )
+        run_pigz(outfile1, config.num_threads, config.gziptool)
+        run_pigz(outfile2, config.num_threads, config.gziptool)
+
+        r1path = Path(r1file)
+        r2path = Path(r2file)
+        if removerfiles and r1path.is_file():
+            r1path.unlink()
+        if removerfiles and r2path.is_file():
+            r2path.unlink()
+        Path(tmpdir).rmdir()
+        fastqfiles = [outfile1 + ".gz", outfile2 + ".gz"]
+
+    return fastqfiles, nseqs
 
 
 def run_preprocessing(config: PreprocessConfig) -> tuple[list[str], int]:
@@ -290,7 +415,7 @@ def run_preprocessing(config: PreprocessConfig) -> tuple[list[str], int]:
         else:
             logger.warning("fastp failed, continuing with original reads")
 
-    # Determine effective mode (may change if fastp merged reads)
+    # Determine effective mode (may change from paired to single if fastp merged reads)
     effective_mode = "paired" if input_read2 else "single"
 
     # Step 2: Setup temp directory
@@ -299,23 +424,13 @@ def run_preprocessing(config: PreprocessConfig) -> tuple[list[str], int]:
     else:
         newtmpdir = generate_random_dir(str(config.output_path))
 
+    # TODO: If fastp handles UMI extraction and we remove cutadapt, we can skip the next steps. 
+    # For that we would need to make sure that fastp puts UMIs in the fastq header in a way that can
+    # be parsed by umierrorcorrect downstream.
     # Step 3: Unzip input files
-    if not str(input_read1).endswith("gz"):
-        r1file = str(input_read1)
-        removerfiles = False
-        if effective_mode == "paired":
-            if not input_read2:
-                raise ValueError("Read2 not provided in paired mode")
-            r2file = str(input_read2)
-    else:
-        removerfiles = True
-        if effective_mode == "paired":
-            if not input_read2:
-                raise ValueError("Read2 not provided in paired mode")
-            r1file = run_unpigz(str(input_read1), newtmpdir, config.num_threads, config.gziptool)
-            r2file = run_unpigz(str(input_read2), newtmpdir, config.num_threads, config.gziptool)
-        else:
-            r1file = run_unpigz(str(input_read1), newtmpdir, config.num_threads, config.gziptool)
+    r1file, r2file, removerfiles = prepare_input_files(
+        input_read1, input_read2, effective_mode, newtmpdir, config.num_threads, config.gziptool
+    )
 
     logger.info(f"Writing output files to {config.output_path}")
 
@@ -324,7 +439,12 @@ def run_preprocessing(config: PreprocessConfig) -> tuple[list[str], int]:
         output_path = Path(config.output_path)
         r2_input = r2file if effective_mode == "paired" else None
         r1file, r2file_out = run_cutadapt(
-            r1file, r2_input, output_path, config.sample_name, config.adapter_sequence, effective_mode
+            r1file,
+            r2_input,
+            output_path,
+            config.sample_name,
+            config.adapter_sequence,
+            effective_mode,
         )
         if effective_mode == "paired":
             if r2file_out is None:
@@ -332,38 +452,4 @@ def run_preprocessing(config: PreprocessConfig) -> tuple[list[str], int]:
             r2file = r2file_out
 
     # Step 5: UMI extraction
-    output_path = Path(config.output_path)
-    if effective_mode == "single":
-        outfilename = str(output_path / f"{config.sample_name}_umis_in_header.fastq")
-        nseqs = preprocess_se(r1file, outfilename, config.umi_length, config.spacer_length)
-        run_pigz(outfilename, config.num_threads, config.gziptool)
-        if removerfiles:
-            Path(r1file).unlink()
-        Path(newtmpdir).rmdir()
-        fastqfiles = [f"{outfilename}.gz"]
-    else:
-        if config.reverse_index:
-            # switch forward and reverse read
-            r1filetmp = r1file
-            r1file = r2file
-            r2file = r1filetmp
-            outfile1 = str(output_path / f"{config.sample_name}_R2_umis_in_header.fastq")
-            outfile2 = str(output_path / f"{config.sample_name}_R1_umis_in_header.fastq")
-        else:
-            outfile1 = str(output_path / f"{config.sample_name}_R1_umis_in_header.fastq")
-            outfile2 = str(output_path / f"{config.sample_name}_R2_umis_in_header.fastq")
-        nseqs = preprocess_pe(
-            r1file, r2file, outfile1, outfile2, config.umi_length, config.spacer_length, config.dual_index
-        )
-        run_pigz(outfile1, config.num_threads, config.gziptool)
-        run_pigz(outfile2, config.num_threads, config.gziptool)
-        r1path = Path(r1file)
-        r2path = Path(r2file)
-        if removerfiles is True and r1path.is_file():
-            r1path.unlink()
-        if removerfiles is True and r2path.is_file():
-            r2path.unlink()
-        Path(newtmpdir).rmdir()
-        fastqfiles = [outfile1 + ".gz", outfile2 + ".gz"]
-    logger.info("Finished preprocessing")
-    return (fastqfiles, nseqs)
+    return process_umi_extraction(r1file, r2file, effective_mode, config, removerfiles, newtmpdir)
