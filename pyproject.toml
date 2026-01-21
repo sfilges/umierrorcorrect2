@@ -34,6 +34,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["ruff", "pytest", "pytest-cov", "mypy", "pre-commit"]
 docs = ["sphinx", "sphinx-rtd-theme"]
+fast = ["numba>=0.57.0"]
 
 [project.scripts]
 umierrorcorrect = "umierrorcorrect.cli:main_cli"

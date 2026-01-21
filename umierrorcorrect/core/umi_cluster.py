@@ -1,10 +1,17 @@
 #!/usr/bin/env python3
-# from collections import Counter
-# import time
 import itertools
 from collections.abc import Generator
+from operator import ne
 
 from umierrorcorrect.core.constants import SUBSTRING_OPTIMIZATION_THRESHOLD
+
+# Try to import numba for JIT-compiled hamming distance
+try:
+    from numba import njit
+
+    _HAS_NUMBA = True
+except ImportError:
+    _HAS_NUMBA = False
 
 
 class umi_cluster:
@@ -21,14 +28,30 @@ class umi_cluster:
         self.centroid = newname
 
 
-def hamming_distance(a: str, b: str) -> int:
-    """Returns the Hamming distance between two strings of equal length."""
-    try:
-        assert len(a) == len(b)
-        return sum(i != j for i, j in zip(a, b))
-    except AssertionError as error:
-        print(f"Barcode lengths are not equal for {a}. {b}")
-        raise error
+# Hamming distance implementations
+def _hamming_native(a: str, b: str) -> int:
+    """Optimized native Python hamming distance using map."""
+    return sum(map(ne, a, b))
+
+
+if _HAS_NUMBA:
+
+    @njit(cache=True)
+    def _hamming_numba_core(a: bytes, b: bytes) -> int:
+        """Numba JIT-compiled hamming distance for byte sequences."""
+        count = 0
+        for i in range(len(a)):
+            if a[i] != b[i]:
+                count += 1
+        return count
+
+    def _hamming_numba(a: str, b: str) -> int:
+        """Numba-accelerated hamming distance wrapper."""
+        return _hamming_numba_core(a.encode(), b.encode())
+
+    hamming_distance = _hamming_numba
+else:
+    hamming_distance = _hamming_native
 
 
 def create_substring_matrix(barcodedict: dict[str, int], edit_distance_threshold: int) -> list[dict[str, list[str]]]:
