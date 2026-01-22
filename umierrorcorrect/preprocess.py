@@ -88,9 +88,13 @@ def run_fastp(
         str(config.threads),
     ]
 
-    # Add adapter trimming if enabled
-    if config.trim_adapters:
-        cmd.append("--detect_adapter_for_pe" if read2 else "--detect_adapter")
+    # Add adapter trimming for paired-end if enabled, single-end is automatically detected
+    if config.trim_adapters and read2:
+        cmd.append("--detect_adapter_for_pe")
+
+    # Disable adapter trimming if not enabled (it's auto enabled otherwise)
+    if not config.trim_adapters:
+        cmd.append("--disable_adapter_trimming")
 
     # Add UMI extraction if enabled
     if config.umi_enabled and config.umi_length > 0:
