@@ -2,13 +2,20 @@
 
 import pytest
 from umierrorcorrect.core.umi_cluster import (
+    _HAS_NUMBA,
+    _hamming_native,
     cluster_barcodes,
     create_substring_matrix,
+    get_adj_matrix_from_substring,
     get_connected_components,
     hamming_distance,
     merge_clusters,
     umi_cluster,
 )
+
+# Import numba-specific functions if available
+if _HAS_NUMBA:
+    from umierrorcorrect.core.umi_cluster import _hamming_numba
 
 
 class TestHammingDistance:
@@ -35,17 +42,59 @@ class TestHammingDistance:
         """Completely different strings should have max distance."""
         assert hamming_distance("AAAA", "TTTT") == 4
 
-    def test_unequal_lengths_raises(self):
-        """Strings of different lengths should raise AssertionError."""
-        with pytest.raises(AssertionError):
-            hamming_distance("ACGT", "ACGTA")
-
-        with pytest.raises(AssertionError):
-            hamming_distance("AC", "ACGT")
-
     def test_empty_strings(self):
         """Empty strings should have distance 0."""
         assert hamming_distance("", "") == 0
+
+
+class TestHammingNative:
+    """Tests specifically for the native Python hamming implementation."""
+
+    def test_native_identical(self):
+        """Native implementation: identical strings have distance 0."""
+        assert _hamming_native("ACGT", "ACGT") == 0
+
+    def test_native_single_difference(self):
+        """Native implementation: single difference returns 1."""
+        assert _hamming_native("ACGT", "ACGA") == 1
+
+    def test_native_unequal_lengths_truncates(self):
+        """Native implementation silently truncates to shorter string length."""
+        # map(ne, a, b) stops at the shorter string
+        # "ACGT" vs "ACGTA" compares first 4 chars only
+        assert _hamming_native("ACGT", "ACGTA") == 0
+        assert _hamming_native("ACGT", "TGCAA") == 4
+
+
+@pytest.mark.skipif(not _HAS_NUMBA, reason="numba not installed")
+class TestHammingNumba:
+    """Tests for numba-accelerated hamming distance (when available)."""
+
+    def test_numba_identical_strings(self):
+        """Numba implementation: identical strings have distance 0."""
+        assert _hamming_numba("ACGT", "ACGT") == 0
+        assert _hamming_numba("AAAAAAAAAAAA", "AAAAAAAAAAAA") == 0
+
+    def test_numba_single_difference(self):
+        """Numba implementation: single difference returns 1."""
+        assert _hamming_numba("ACGT", "ACGA") == 1
+        assert _hamming_numba("AAAAAAAAAAAA", "AAAAAAAAAAAC") == 1
+
+    def test_numba_multiple_differences(self):
+        """Numba implementation: multiple differences."""
+        assert _hamming_numba("ACGT", "TGCA") == 4
+        assert _hamming_numba("ACGT", "ACCC") == 2
+
+    def test_numba_matches_native(self):
+        """Numba results should match native implementation."""
+        test_pairs = [
+            ("ACGT", "ACGT"),
+            ("ACGT", "ACGA"),
+            ("AAAAAAAAAAAA", "CCCCCCCCCCCC"),
+            ("ACGTACGTACGT", "ACGTACGTACGA"),
+        ]
+        for a, b in test_pairs:
+            assert _hamming_numba(a, b) == _hamming_native(a, b)
 
 
 class TestUmiClusterClass:
@@ -91,6 +140,77 @@ class TestCreateSubstringMatrix:
         result = create_substring_matrix(barcodes, 2)
 
         assert len(result) == 3  # Three substring dictionaries
+
+    def test_edit_distance_2_substring_contents(self):
+        """Verify substring matrix content for edit_distance=2."""
+        # Use 12-char barcodes for even division into 3 parts
+        barcodes = {"ACGTACGTACGT": 10, "ACGTACGTACGA": 5}
+        result = create_substring_matrix(barcodes, 2)
+
+        assert len(result) == 3
+        substr_dict1, substr_dict2, substr_dict3 = result
+
+        # 12 // 3 = 4, so each substring is 4 chars
+        # ACGTACGTACGT splits to: ACGT, ACGT, ACGT
+        assert "ACGT" in substr_dict1
+        assert "ACGTACGTACGT" in substr_dict1["ACGT"]
+
+        # Third substring of ACGTACGTACGT is ACGT
+        assert "ACGT" in substr_dict3
+        # Third substring of ACGTACGTACGA is ACGA
+        assert "ACGA" in substr_dict3
+
+
+class TestGetAdjMatrixFromSubstring:
+    """Tests for get_adj_matrix_from_substring function."""
+
+    def test_edit_distance_1_neighbors(self):
+        """Test neighbor generation with 2 substrings (edit_distance=1)."""
+        barcodes = {
+            "ACGTACGT": 10,
+            "ACGTACGA": 5,  # Same first half
+            "TGCAACGT": 3,  # Same second half
+        }
+        substring_matrix = create_substring_matrix(barcodes, 1)
+        pairs = list(get_adj_matrix_from_substring(barcodes, substring_matrix))
+
+        # ACGTACGT should be paired with both ACGTACGA (same first half) and TGCAACGT (same second half)
+        # Each barcode generates pairs with its neighbors
+        barcode_pairs = {(a, b) for a, b in pairs}
+        assert ("ACGTACGT", "ACGTACGA") in barcode_pairs or ("ACGTACGA", "ACGTACGT") in barcode_pairs
+        assert ("ACGTACGT", "TGCAACGT") in barcode_pairs or ("TGCAACGT", "ACGTACGT") in barcode_pairs
+
+    def test_edit_distance_2_neighbors(self):
+        """Test neighbor generation with 3 substrings (edit_distance=2)."""
+        # Use 12-char barcodes
+        barcodes = {
+            "ACGTACGTACGT": 10,
+            "ACGTTTTTTTTT": 5,  # Same first third (ACGT)
+            "TTTTACGTTTTT": 3,  # Same middle third (ACGT)
+            "TTTTTTTTACGT": 2,  # Same last third (ACGT)
+        }
+        substring_matrix = create_substring_matrix(barcodes, 2)
+        pairs = list(get_adj_matrix_from_substring(barcodes, substring_matrix))
+
+        # ACGTACGTACGT should have all three as neighbors due to shared substrings
+        neighbors_of_main = set()
+        for a, b in pairs:
+            if a == "ACGTACGTACGT":
+                neighbors_of_main.add(b)
+            elif b == "ACGTACGTACGT":
+                neighbors_of_main.add(a)
+
+        # At least one neighbor should be found due to shared substring
+        assert len(neighbors_of_main) >= 1
+
+    def test_no_self_pairs(self):
+        """Generator should not yield self-pairs."""
+        barcodes = {"ACGTACGT": 10, "ACGTACGA": 5}
+        substring_matrix = create_substring_matrix(barcodes, 1)
+        pairs = list(get_adj_matrix_from_substring(barcodes, substring_matrix))
+
+        for a, b in pairs:
+            assert a != b, "Self-pair found"
 
 
 class TestClusterBarcodes:
@@ -161,6 +281,38 @@ class TestClusterBarcodes:
         adj_matrix = cluster_barcodes(sample_barcode_counts_large, edit_distance_threshold=1)
 
         # Known cluster: AAAAAAAAAAAA (50), AAAAAAAAAAAC (10), AAAAAAAAAAAG (5)
+        assert "AAAAAAAAAAAA" in adj_matrix
+        neighbors = adj_matrix["AAAAAAAAAAAA"]
+        assert "AAAAAAAAAAAC" in neighbors or "AAAAAAAAAAAG" in neighbors
+
+    def test_single_barcode_no_clustering(self):
+        """Single barcode should result in empty adjacency matrix."""
+        barcodes = {"AAAAAAAAAAAA": 10}
+        adj_matrix = cluster_barcodes(barcodes, edit_distance_threshold=1)
+        assert adj_matrix == {}
+
+    def test_equal_counts_uses_first_barcode(self):
+        """When counts are equal, the first in comparison order is the centroid."""
+        barcodes = {
+            "AAAAAAAAAAAA": 10,
+            "AAAAAAAAAAAC": 10,  # Same count
+        }
+        adj_matrix = cluster_barcodes(barcodes, edit_distance_threshold=1)
+
+        # With equal counts, barcodedict[a] >= barcodedict[b] is True
+        # So whichever comes first in the comparison will be the key
+        assert len(adj_matrix) == 1
+        # One barcode should be the key, the other in its neighbors
+        key = list(adj_matrix.keys())[0]
+        assert key in ["AAAAAAAAAAAA", "AAAAAAAAAAAC"]
+        assert len(adj_matrix[key]) == 1
+
+    def test_large_barcode_set_with_edit_distance_2(self, sample_barcode_counts_large):
+        """Test substring optimization with edit_distance=2 (3 substrings)."""
+        adj_matrix = cluster_barcodes(sample_barcode_counts_large, edit_distance_threshold=2)
+
+        # AAAAAAAAAAAA and AAAAAAAAAAAC have edit distance 1, should cluster
+        # AAAAAAAAAAAA and AAAAAAAAAAAG have edit distance 1, should cluster
         assert "AAAAAAAAAAAA" in adj_matrix
         neighbors = adj_matrix["AAAAAAAAAAAA"]
         assert "AAAAAAAAAAAC" in neighbors or "AAAAAAAAAAAG" in neighbors

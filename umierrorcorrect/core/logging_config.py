@@ -2,7 +2,6 @@
 """Logging configuration using loguru for umierrorcorrect."""
 
 import contextlib
-import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Literal
@@ -76,37 +75,6 @@ def get_logger(name: str | None = None):
     if name:
         return logger.bind(name=name)
     return logger
-
-
-# Intercept standard logging to redirect to loguru
-class InterceptHandler:
-    """Handler to intercept standard logging and redirect to loguru."""
-
-    def __init__(self, level: int = 0) -> None:
-        self.level = level
-
-    def emit(self, record) -> None:
-        """Emit a log record."""
-        # Get corresponding Loguru level if it exists
-        try:
-            level = logger.level(record.levelname).name
-        except ValueError:
-            level = record.levelno
-
-        # Find caller from where originated the logged message
-        frame, depth = sys._getframe(6), 6
-        while frame and frame.f_code.co_filename == __file__:
-            frame = frame.f_back
-            depth += 1
-
-        logger.opt(depth=depth, exception=record.exc_info).log(level, record.getMessage())
-
-
-def redirect_standard_logging() -> None:
-    """Redirect standard logging module to use loguru."""
-    import logging
-
-    logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)
 
 
 def get_log_path(output_dir: Path | str) -> Path:

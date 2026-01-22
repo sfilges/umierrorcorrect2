@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 import itertools
 from collections.abc import Generator
+from dataclasses import dataclass
 from operator import ne
 
 from umierrorcorrect.core.constants import SUBSTRING_OPTIMIZATION_THRESHOLD
+
 
 # Try to import numba for JIT-compiled hamming distance
 try:
@@ -14,12 +16,12 @@ except ImportError:
     _HAS_NUMBA = False
 
 
+@dataclass
 class umi_cluster:
     """Container for UMI cluster information."""
 
-    def __init__(self, name: str, count: int) -> None:
-        self.centroid: str = name
-        self.count: int = count
+    centroid: str
+    count: int
 
     def add_count(self, newcount: int) -> None:
         self.count += newcount
@@ -28,7 +30,25 @@ class umi_cluster:
         self.centroid = newname
 
 
+# ----------------------------------------------
 # Hamming distance implementations
+# ----------------------------------------------
+
+
+def _hamming_original(a, b):
+    """
+    Returns the Hamming distance between two strings of equal length
+
+    Original implementation from umierrorcorrect, now deprecated.
+    """
+    try:
+        assert len(a) == len(b)
+        return sum(i != j for i, j in zip(a, b))
+    except AssertionError as error:
+        print("Barcode lengths are not equal for {}. {}".format(a, b))
+        raise (error)
+
+
 def _hamming_native(a: str, b: str) -> int:
     """Optimized native Python hamming distance using map."""
     return sum(map(ne, a, b))
@@ -53,7 +73,13 @@ if _HAS_NUMBA:
 else:
     hamming_distance = _hamming_native
 
+# ----------------------------------------------
+# UMI clustering functions
+# ----------------------------------------------
 
+
+# TODO: Do these implementations match [UMI-tools](https://github.com/CGATOxford/UMI-tools/tree/77e186c6b51917136fe5b4faf3f01ead7eb75aff)?
+# TODO: Can this be improved? Or better to call UMI-tools directly?
 def create_substring_matrix(barcodedict: dict[str, int], edit_distance_threshold: int) -> list[dict[str, list[str]]]:
     """Divide each barcode in two or three substrings of (approximately) equal length."""
     edit_distance_threshold = int(edit_distance_threshold)
@@ -158,25 +184,22 @@ def cluster_barcodes(barcodedict: dict[str, int], edit_distance_threshold: int) 
 def get_connected_components(barcodedict: dict[str, int], adj_matrix: dict[str, list[str]]) -> list[list[str]]:
     """Get connected components from the adjacency matrix."""
     clusters: list[list[str]] = []
-    added: list[str] = []
+    added: set[str] = set()
     umi_sorted = sorted(barcodedict, key=lambda x: barcodedict[x], reverse=True)  # sort umis by counts, reversed
     for umi in umi_sorted:
         if umi not in added:
             if umi in adj_matrix:
-                cluster = []
-                cluster.append(umi)
-                added.append(umi)
+                cluster = [umi]
+                added.add(umi)
                 for neighbor in adj_matrix[umi]:
                     if neighbor not in added:
                         cluster.append(neighbor)
-                        added.append(neighbor)
+                        added.add(neighbor)
                 clusters.append(cluster)
             else:
                 cluster = [umi]
                 clusters.append(cluster)
-                added.append(umi)
-    # print(len(added))
-    # print(len(barcodedict))
+                added.add(umi)
     return clusters
 
 
