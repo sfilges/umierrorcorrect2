@@ -55,8 +55,18 @@ def run_fastp(
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Output file paths
-    filtered_r1 = output_dir / f"{sample_name}.filtered.R1.fastq.gz"
+    # Determine output file naming based on whether UMI extraction is enabled
+    umi_extraction = config.umi_enabled and config.umi_length > 0
+
+    # Output file paths - use "_umis_in_header" suffix when fastp handles UMI extraction
+    if umi_extraction:
+        filtered_r1 = (
+            output_dir / f"{sample_name}_umis_in_header.fastq.gz"
+            if not read2
+            else output_dir / f"{sample_name}_R1_umis_in_header.fastq.gz"
+        )
+    else:
+        filtered_r1 = output_dir / f"{sample_name}.filtered.R1.fastq.gz"
     filtered_r2: Optional[Path] = None
     merged_reads: Optional[Path] = None
     fastp_json = output_dir / f"{sample_name}.fastp.json"
@@ -82,12 +92,32 @@ def run_fastp(
     if config.trim_adapters:
         cmd.append("--detect_adapter_for_pe" if read2 else "--detect_adapter")
 
+    # Add UMI extraction if enabled
+    if config.umi_enabled and config.umi_length > 0:
+        cmd.extend(
+            [
+                "--umi",
+                "--umi_loc",
+                config.umi_loc,
+                "--umi_len",
+                str(config.umi_length),
+            ]
+        )
+        if config.umi_skip > 0:
+            cmd.extend(["--umi_skip", str(config.umi_skip)])
+
     if read2:
-        filtered_r2 = output_dir / f"{sample_name}.filtered.R2.fastq.gz"
+        if umi_extraction:
+            filtered_r2 = output_dir / f"{sample_name}_R2_umis_in_header.fastq.gz"
+        else:
+            filtered_r2 = output_dir / f"{sample_name}.filtered.R2.fastq.gz"
         cmd.extend(["-I", str(read2), "-O", str(filtered_r2)])
 
         if config.merge_reads:
-            merged_reads = output_dir / f"{sample_name}.merged.fastq.gz"
+            if umi_extraction:
+                merged_reads = output_dir / f"{sample_name}_umis_in_header.fastq.gz"
+            else:
+                merged_reads = output_dir / f"{sample_name}.merged.fastq.gz"
             cmd.extend(["--merge", "--merged_out", str(merged_reads)])
 
     logger.info(f"Running fastp on {sample_name}")
@@ -250,6 +280,7 @@ def preprocess_pe(
                 g2.write("\n".join([newname2, seq2, "+", qual2]) + "\n")
     return 2 * nseqs
 
+
 def prepare_input_files(
     input_read1: Path,
     input_read2: Optional[Path],
@@ -387,7 +418,12 @@ def run_preprocessing(config: PreprocessConfig) -> tuple[list[str], int]:
 
     # Step 1: Optional fastp preprocessing
     if config.fastp_config is not None and config.fastp_config.enabled:
-        fastp_output_dir = config.output_path / "fastp_filtered"
+        # Output to main directory if UMI extraction is enabled (final output), otherwise subdirectory
+        umi_extraction = config.fastp_config.umi_enabled and config.fastp_config.umi_length > 0
+        if umi_extraction:
+            fastp_output_dir = config.output_path
+        else:
+            fastp_output_dir = config.output_path / "fastp_filtered"
 
         fastp_result = run_fastp(
             read1=config.read1,
@@ -398,6 +434,20 @@ def run_preprocessing(config: PreprocessConfig) -> tuple[list[str], int]:
         )
 
         if fastp_result is not None:
+            # If fastp handled UMI extraction, return early with the output files
+            if umi_extraction:
+                logger.info("UMI extraction handled by fastp")
+
+                if fastp_result.merged_reads and fastp_result.merged_reads.exists():
+                    logger.info(f"Using merged reads with UMIs from fastp: {fastp_result.merged_reads}")
+                    return [str(fastp_result.merged_reads)], -1
+                elif fastp_result.filtered_read2:
+                    logger.info("Using paired reads with UMIs from fastp")
+                    return [str(fastp_result.filtered_read1), str(fastp_result.filtered_read2)], -1
+                else:
+                    logger.info("Using single-end reads with UMIs from fastp")
+                    return [str(fastp_result.filtered_read1)], -1
+
             # Handle merged reads case (paired-end with merge enabled)
             if fastp_result.merged_reads and fastp_result.merged_reads.exists():
                 input_read1 = fastp_result.merged_reads
@@ -424,10 +474,7 @@ def run_preprocessing(config: PreprocessConfig) -> tuple[list[str], int]:
     else:
         newtmpdir = generate_random_dir(str(config.output_path))
 
-    # TODO: If fastp handles UMI extraction and we remove cutadapt, we can skip the next steps. 
-    # For that we would need to make sure that fastp puts UMIs in the fastq header in a way that can
-    # be parsed by umierrorcorrect downstream.
-    # Step 3: Unzip input files
+    # Step 3: Unzip input files (only reached if fastp didn't handle UMI extraction)
     r1file, r2file, removerfiles = prepare_input_files(
         input_read1, input_read2, effective_mode, newtmpdir, config.num_threads, config.gziptool
     )

@@ -374,12 +374,24 @@ def batch_process(
     # Create FastpConfig if fastp is enabled (will be passed to run_preprocessing)
     fastp_config: Optional[FastpConfig] = None
     if fastp:
+        # Determine UMI location from dual_index and reverse_index flags
+        if dual_index:
+            umi_loc = "per_read"
+        elif reverse_index:
+            umi_loc = "read2"
+        else:
+            umi_loc = "read1"
+
         fastp_config = FastpConfig(
             enabled=True,
             phred_score=phred_score,
             merge_reads=merge_reads,
             trim_adapters=adapter_trimming,
             threads=threads_per_sample,
+            umi_enabled=True,
+            umi_length=umi_length,
+            umi_skip=spacer_length,
+            umi_loc=umi_loc,
         )
 
     # Run FastQC if requested

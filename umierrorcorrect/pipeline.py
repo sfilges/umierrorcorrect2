@@ -17,13 +17,13 @@ External Dependencies:
 
 from pathlib import Path
 
+from umierrorcorrect.align import align_bwa, check_bwa_index
 from umierrorcorrect.call_variants import run_call_variants
 from umierrorcorrect.core.check_args import check_args_fastq
 from umierrorcorrect.core.logging_config import get_logger
 from umierrorcorrect.core.utils import get_sample_name
 from umierrorcorrect.get_consensus_statistics import run_get_consensus_statistics
 from umierrorcorrect.preprocess import run_preprocessing
-from umierrorcorrect.align import check_bwa_index, align_bwa
 from umierrorcorrect.umi_error_correct import run_umi_errorcorrect
 
 logger = get_logger(__name__)

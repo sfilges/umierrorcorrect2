@@ -80,12 +80,24 @@ def preprocess(
     # Create FastpConfig if fastp is enabled
     fastp_config: Optional[FastpConfig] = None
     if fastp:
+        # Determine UMI location from dual_index and reverse_index flags
+        if dual_index:
+            umi_loc = "per_read"
+        elif reverse_index:
+            umi_loc = "read2"
+        else:
+            umi_loc = "read1"
+
         fastp_config = FastpConfig(
             enabled=True,
             phred_score=fastp_phred,
             merge_reads=fastp_merge,
             trim_adapters=adapter_trimming,
             threads=threads,
+            umi_enabled=True,
+            umi_length=umi_length,
+            umi_skip=spacer_length,
+            umi_loc=umi_loc,
         )
 
     # Create unified PreprocessConfig - fastp handling is now internal
@@ -235,7 +247,7 @@ def mapping(
 ) -> None:
     """Run BWA mapping to reference genome."""
 
-    from umierrorcorrect.align import check_output_directory, get_sample_name, align_bwa
+    from umierrorcorrect.align import align_bwa, check_output_directory, get_sample_name
 
     output_path = check_output_directory(str(output))
 

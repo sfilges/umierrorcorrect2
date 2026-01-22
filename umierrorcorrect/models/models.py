@@ -27,6 +27,11 @@ class FastpConfig(BaseModel):
     merge_reads: bool = True
     trim_adapters: bool = True
     threads: int = 4
+    # UMI extraction settings
+    umi_enabled: bool = True
+    umi_length: int = 0
+    umi_skip: int = 0  # spacer length
+    umi_loc: Literal["read1", "read2", "per_read"] = "read1"
 
 
 class Sample(BaseModel):

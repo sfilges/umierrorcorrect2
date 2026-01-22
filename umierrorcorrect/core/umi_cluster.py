@@ -6,7 +6,6 @@ from operator import ne
 
 from umierrorcorrect.core.constants import SUBSTRING_OPTIMIZATION_THRESHOLD
 
-
 # Try to import numba for JIT-compiled hamming distance
 try:
     from numba import njit
@@ -45,7 +44,7 @@ def _hamming_original(a, b):
         assert len(a) == len(b)
         return sum(i != j for i, j in zip(a, b))
     except AssertionError as error:
-        print("Barcode lengths are not equal for {}. {}".format(a, b))
+        print(f"Barcode lengths are not equal for {a}. {b}")
         raise (error)
 
 
