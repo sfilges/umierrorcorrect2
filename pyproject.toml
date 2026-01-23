@@ -155,10 +155,11 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = [
     "umierrorcorrect.core.consensus",
+    "umierrorcorrect.core.group",
     "umierrorcorrect.core.umi_cluster",
     "umierrorcorrect.umi_error_correct",
     "umierrorcorrect.get_consensus_statistics",
     "umierrorcorrect.cli",
-    "umierrorcorrect.core.logging_config"
+    "umierrorcorrect.core.logging_config",
 ]
 ignore_errors = true

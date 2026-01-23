@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.30.2] - 2026-01-24
+
+### Fixed
+
+- **Grouping**: R1 and R2 were counted as seprate reads leading to inflated consensus coverage.
+- `count_umis_in_region`: Now counts unique Query Names (QNAMEs) per UMI.
+- `group_by_position`: Updated the default automatic grouping mode to deduplicate mates within each 20bp region.
+- `read_bam_from_tag`: Updated the tag-based grouping mode to deduplicate mates sharing the same UG tag.
+- Bounding Box Robustness: In read_bam_from_tag, I also ensured that the starts dictionary tracks the minimum start position of any read in the group, ensuring the consensus covers the entire fragment range.
+
 ## [0.30.1] - 2026-01-23
 
 ### Added

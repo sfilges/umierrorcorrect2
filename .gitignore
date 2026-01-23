@@ -10,7 +10,7 @@ __pycache__/
 *.so
 
 .dockerignore
-
+.mypy_cache/
 *.sam
 results*/
 .vscode/
