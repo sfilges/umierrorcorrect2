@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.30.1] - 2026-01-23
+
+### Added
+- **Shell Completion**: Re-enabled `typer` shell completion support via `--install-completion`.
+
+### Fixed
+- **Numba Stability**: Added robust error handling for broken Numba/LLVM installations to ensure graceful fallback.
+- **Recursive Discovery**: Fixed recursive FASTQ discovery in subdirectories for the `batch` command.
+- **Type Safety**: Resolved 80+ `mypy` errors and improved type annotations across the codebase.
+- **CI Stability**: Adjusted `mypy` and `ruff` configurations for reliable production CI/CD.
+- **Installation**: Removed unnecessary `[all]` extra from `typer` dependency to avoid installation warnings.
+
 ## [0.30.0] - 2026-01-23
 
 ### Added
@@ -33,4 +45,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed path handling issues using `pathlib`.
 
 ---
+[0.30.1]: https://github.com/sfilges/umierrorcorrect2/releases/tag/v0.30.1
 [0.30.0]: https://github.com/sfilges/umierrorcorrect2/releases/tag/v0.30.0

@@ -16,7 +16,6 @@ from umierrorcorrect.version import __version__
 app = typer.Typer(
     name="umierrorcorrect",
     help="Pipeline for analyzing barcoded amplicon sequencing data with Unique Molecular Identifiers (UMI).",
-    add_completion=False,
     no_args_is_help=True,
     rich_markup_mode="rich",
 )

@@ -3,9 +3,9 @@ FROM ubuntu:24.04
 
 ################## METADATA ######################
 LABEL base.image="ubuntu:24.04"
-LABEL version="0.30.0"
+LABEL version="0.30.1"
 LABEL software="umierrorcorrect"
-LABEL software.version="0.30.0"
+LABEL software.version="0.30.1"
 LABEL about.summary="Modernized UMI error correction pipeline for barcoded amplicon sequencing"
 LABEL about.home="https://github.com/sfilges/umierrorcorrect2"
 LABEL about.tags="Genomics,UMI,Bioinformatics"
