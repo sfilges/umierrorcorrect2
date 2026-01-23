@@ -143,9 +143,9 @@ class ConsensusRead:
             a.reference_id = f.references.index(self.contig)
             a.reference_start = self.start_pos
             a.mapping_quality = DEFAULT_MAPPING_QUALITY
-            a.cigar = self.get_cigar()
-            a.query_qualities = pysam.qualitystring_to_array(self.qual)
-            a.tags = (("NM", self.nmtag), ("RG", READ_GROUP_TAG))
+            a.cigar = self.get_cigar()  # type: ignore
+            a.query_qualities = pysam.qualitystring_to_array(self.qual)  # type: ignore
+            a.tags = (("NM", self.nmtag), ("RG", READ_GROUP_TAG))  # type: ignore
             f.write(a)
         else:
             self._write_split_read_to_bam(f)
@@ -178,9 +178,9 @@ class ConsensusRead:
                 groups = groupby(self.cigarstring[start:endc])
                 cigar = tuple((int(label), sum(1 for _ in group)) for label, group in groups)
 
-                a.cigar = cigar
-                a.query_qualities = pysam.qualitystring_to_array(self.qual)[start:end]
-                a.tags = (("NM", self.nmtag), ("RG", READ_GROUP_TAG))
+                a.cigar = cigar  # type: ignore
+                a.query_qualities = pysam.qualitystring_to_array(self.qual)[start:end]  # type: ignore
+                a.tags = (("NM", self.nmtag), ("RG", READ_GROUP_TAG))  # type: ignore
                 f.write(a)
 
 
@@ -566,7 +566,7 @@ def get_consensus_msa(
 
     with tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8") as f:
         for a in group_seqs:
-            name = a.query_name
+            name = a.query_name  # type: ignore
             seq = a.query_sequence
             if seq:
                 f.write(f">{name}\n{seq}\n")
@@ -745,5 +745,5 @@ def write_singleton_reads(
 ) -> None:
     """Write singleton reads directly to the output BAM."""
     for umi, read in singleton_matrix.items():
-        read.query_name = f"Singleton_read_{region_id}_{umi}_Count=1"
+        read.query_name = f"Singleton_read_{region_id}_{umi}_Count=1"  # type: ignore
         g.write(read)

@@ -24,7 +24,7 @@ def check_bwa_index(reference_file: str | Path) -> None:
         logger.error(f"Reference genome file {reference_file} does not exist, exiting")
         sys.exit(1)
 
-    if not Path(reference_file + ".bwt").is_file():  # check if index exists
+    if not Path(str(reference_file) + ".bwt").is_file():  # check if index exists
         logger.warning(f"BWA index for reference genome file {reference_file} does not exist")
         answer = input("Do you want to create a BWA index now? (y/n) ").lower().strip()
         while answer not in ("y", "yes", "n", "no"):

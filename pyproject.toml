@@ -10,7 +10,7 @@ dynamic = ["version"]
 description = "Pipeline for analyzing barcoded amplicon sequencing data with Unique Molecular Identifiers (UMI)"
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 authors = [
     { name = "Stefan Filges", email = "stefan.filges@pm.me" },
     { name = "Tobias Osterlund", email = "tobias.osterlund@gu.se" },
@@ -141,7 +141,7 @@ show_missing = true
 
 # Mypy configuration
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.10"
 warn_return_any = true
 warn_unused_configs = true
 ignore_missing_imports = true

@@ -121,7 +121,7 @@ def expand_regions_from_bed(regions: RegionDict, bamfile: str) -> RegionDict:
                 reads = f.pileup(contig, annotation_start, annotation_end)
                 for pileupColumn in reads:
                     for r in pileupColumn.pileups:
-                        pos = r.alignment.pos
+                        pos = r.alignment.reference_start
                         if pos < minpos:
                             minpos = pos
                         if pos > maxpos:

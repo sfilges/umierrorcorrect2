@@ -16,7 +16,9 @@ from umierrorcorrect.core.constants import DEFAULT_FAMILY_SIZES, HISTOGRAM_SUFFI
 from umierrorcorrect.core.logging_config import get_logger
 from umierrorcorrect.get_consensus_statistics import (
     get_stat,
-    region_cons_stat,
+    RegionConsensusStats,
+    calculate_target_coverage,
+    get_overall_statistics,
 )
 
 logger = get_logger(__name__)

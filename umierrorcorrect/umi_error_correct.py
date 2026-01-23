@@ -627,9 +627,7 @@ def run_umi_errorcorrect(config: UMIErrorCorrectConfig) -> None:
 
     # Cluster UMIs on position
     if group_method == "fromTag":
-        regions, ends, starts = cluster_umis_on_position(
-            bam_file, config.position_threshold, group_method, bed_file
-        )
+        regions, ends, starts = cluster_umis_on_position(bam_file, config.position_threshold, group_method, bed_file)
     else:
         regions, ends = cluster_umis_on_position(bam_file, config.position_threshold, group_method, bed_file)
         starts = None

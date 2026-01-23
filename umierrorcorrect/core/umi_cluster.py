@@ -11,7 +11,7 @@ try:
     from numba import njit
 
     _HAS_NUMBA = True
-except ImportError:
+except Exception:  # Catch ImportError and other initialization errors (e.g. from llvmlite)
     _HAS_NUMBA = False
 
 

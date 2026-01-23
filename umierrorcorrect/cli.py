@@ -249,7 +249,8 @@ def mapping(
 ) -> None:
     """Run BWA mapping to reference genome."""
 
-    from umierrorcorrect.align import align_bwa, check_output_directory, get_sample_name
+    from umierrorcorrect.align import align_bwa
+    from umierrorcorrect.core.utils import check_output_directory, get_sample_name
 
     output_path = check_output_directory(str(output))
 
@@ -269,7 +270,7 @@ def mapping(
         sample_name = get_sample_name(str(read1), mode)
 
     logger.info("Starting BWA mapping")
-    align_bwa(str(threads), str(reference), fastq_files, output_path, sample_name, remove_files)
+    align_bwa(threads, reference, [Path(f) for f in fastq_files], output_path, sample_name, remove_files)
     logger.info("Mapping complete!")
 
 
@@ -504,7 +505,7 @@ def batch(
             raise typer.Exit(1) from None
     else:
         # input_dir mode
-        if not input_dir.exists():
+        if input_dir is None or not input_dir.exists():
             console.print(f"[red]Error:[/red] Input directory not found: {input_dir}")
             raise typer.Exit(1)
         samples = discover_samples(input_dir)
@@ -535,6 +536,8 @@ def batch(
 
     # Print summary
     console.print(Text(ASCII_ART, style="bold green"))
+    console.print(f"  Version: {__version__}")
+    console.print("\n")
     console.print(f"  Mode: {mode_str}")
     console.print(f"  Samples: {len(samples)}")
 
