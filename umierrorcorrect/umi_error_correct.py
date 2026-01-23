@@ -27,7 +27,6 @@ from umierrorcorrect.core.get_regions_from_bed import get_overlap, merge_regions
 from umierrorcorrect.core.group import read_bam_from_bed, read_bam_from_tag, readBam
 from umierrorcorrect.core.logging_config import get_logger
 from umierrorcorrect.core.umi_cluster import cluster_barcodes, get_connected_components, merge_clusters
-from umierrorcorrect.core.utils import get_sample_name
 from umierrorcorrect.models.models import UMIErrorCorrectConfig
 
 logger = get_logger(__name__)

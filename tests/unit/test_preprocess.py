@@ -1,7 +1,7 @@
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
+
 import pytest
-from umierrorcorrect.models.models import FastpConfig, FastpResult
+from umierrorcorrect.models.models import FastpConfig
 from umierrorcorrect.preprocess import run_fastp
 
 

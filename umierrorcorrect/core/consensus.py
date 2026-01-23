@@ -11,7 +11,7 @@ from collections import Counter
 from dataclasses import dataclass, field
 from itertools import groupby
 from math import log10
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 import pysam
 
@@ -58,14 +58,14 @@ class ConsensusRead:
     umi_count: int
     name: str = field(init=False)
     count: int = field(init=False)
-    _seq_parts: List[str] = field(default_factory=list, repr=False)
-    _qual_parts: List[str] = field(default_factory=list, repr=False)
-    _cigar_parts: List[str] = field(default_factory=list, repr=False)
+    _seq_parts: list[str] = field(default_factory=list, repr=False)
+    _qual_parts: list[str] = field(default_factory=list, repr=False)
+    _cigar_parts: list[str] = field(default_factory=list, repr=False)
     indel_read: int = 0
     nmtag: int = 0
     is_split_read: bool = False
-    splits: List[Union[int, Tuple[int, int]]] = field(default_factory=list)
-    json: Dict[str, Any] = field(default_factory=dict)
+    splits: list[Union[int, tuple[int, int]]] = field(default_factory=list)
+    json: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         """Initialize derived fields."""
@@ -108,7 +108,7 @@ class ConsensusRead:
         self.nmtag += int(dellength)
         self.indel_read = -1
 
-    def get_cigar(self) -> Tuple[Tuple[int, int], ...]:
+    def get_cigar(self) -> tuple[tuple[int, int], ...]:
         """Generate CIGAR tuple for pysam."""
         cigarstring = self.cigarstring
         groups = groupby(cigarstring)
@@ -129,7 +129,7 @@ class ConsensusRead:
                 self.splits[-1] = (tmppos, position1)
                 self.splits.append(position2)
 
-    def add_json_object(self, dictionary: Dict[str, Any]) -> None:
+    def add_json_object(self, dictionary: dict[str, Any]) -> None:
         """Add metadata dictionary."""
         self.json = dictionary
 
@@ -172,12 +172,12 @@ class ConsensusRead:
                 a.flag = 0
                 a.reference_id = f.references.index(self.contig)
                 a.mapping_quality = DEFAULT_MAPPING_QUALITY
-                
+
                 # Calculate CIGAR for this segment
                 endc = end + self.cigarstring[start:end].count("2")  # add 1 for each deletion
                 groups = groupby(self.cigarstring[start:endc])
                 cigar = tuple((int(label), sum(1 for _ in group)) for label, group in groups)
-                
+
                 a.cigar = cigar
                 a.query_qualities = pysam.qualitystring_to_array(self.qual)[start:end]
                 a.tags = (("NM", self.nmtag), ("RG", READ_GROUP_TAG))
@@ -191,12 +191,12 @@ def get_reference_sequence(fasta: pysam.FastaFile, chrx: str, start: int, stop: 
     return ref
 
 
-def get_most_common_allele(cons_pos: Dict[str, Any]) -> Tuple[str, float]:
+def get_most_common_allele(cons_pos: dict[str, Any]) -> tuple[str, float]:
     """Calculate the allele with the highest frequency at a position.
-    
+
     Args:
         cons_pos: Dictionary of base counts/qualities at a position.
-        
+
     Returns:
         Tuple of (most_common_allele, percentage).
     """
@@ -209,10 +209,10 @@ def get_most_common_allele(cons_pos: Dict[str, Any]) -> Tuple[str, float]:
         else:
             # Bases are lists of qualities
             cons_dict[x] = len(y)
-    
+
     if not cons_dict:
         return ("N", 0.0)
-        
+
     cons_allele = max(cons_dict, key=cons_dict.get)  # type: ignore
     total = sum(cons_dict.values())
     cons_percent = (cons_dict[cons_allele] / total) * 100 if total > 0 else 0.0
@@ -229,7 +229,7 @@ def get_ascii(value: int) -> str:
     return chr(value + 33)
 
 
-def calc_consensus(base: str, cons_pos: Dict[str, List[int]]) -> float:
+def calc_consensus(base: str, cons_pos: dict[str, list[int]]) -> float:
     """Calculate the combined probability score for a base at a position."""
     prod = 1.0
     for nucl in cons_pos:
@@ -246,38 +246,38 @@ def calc_consensus(base: str, cons_pos: Dict[str, List[int]]) -> float:
     return prod
 
 
-def calc_consensus_probabilities(cons_pos: Dict[str, List[int]]) -> Tuple[str, int]:
+def calc_consensus_probabilities(cons_pos: dict[str, list[int]]) -> tuple[str, int]:
     """Calculate the probability of consensus at a given position.
-    
+
     Returns:
         Tuple of (consensus_base, consensus_phred_score).
     """
     p = {base: calc_consensus(base, cons_pos) for base in "ATCG"}
     denom = sum(p.values())
-    
+
     if denom > 0:
         probs = {base: p[base] / denom for base in "ATCG"}
     else:
         probs = dict.fromkeys("ATCG", 0.0)
-    
-    cons_base = max(probs, key=probs.get) # type: ignore
+
+    cons_base = max(probs, key=probs.get)  # type: ignore
     prob_val = probs[cons_base]
-    
-    if prob_val >= 1.0: # Floating point tolerance handling implied
+
+    if prob_val >= 1.0:  # Floating point tolerance handling implied
         cons_phred = MAX_PHRED_SCORE
     else:
         try:
             cons_phred = round(-10 * log10(1 - prob_val))
         except (ValueError, ZeroDivisionError):
             cons_phred = MAX_PHRED_SCORE
-            
+
         if cons_phred > MAX_PHRED_SCORE:
             cons_phred = MAX_PHRED_SCORE
-            
+
     return (cons_base, cons_phred)
 
 
-def get_position_coverage(covpos: Dict[str, Any]) -> int:
+def get_position_coverage(covpos: dict[str, Any]) -> int:
     """Calculate total coverage at a position, including deletions."""
     coverage = sum([len(covpos[x]) for x in covpos if x not in ["D", "I"]])
     if "D" in covpos:
@@ -286,7 +286,7 @@ def get_position_coverage(covpos: Dict[str, Any]) -> int:
     return coverage
 
 
-def _add_base_to_consensus(consensus: Dict[int, Dict], refpos: int, base: str, phred: int) -> None:
+def _add_base_to_consensus(consensus: dict[int, dict], refpos: int, base: str, phred: int) -> None:
     """Add a base with quality score to the consensus dictionary."""
     if refpos not in consensus:
         consensus[refpos] = {}
@@ -295,13 +295,13 @@ def _add_base_to_consensus(consensus: Dict[int, Dict], refpos: int, base: str, p
     consensus[refpos][base].append(phred)
 
 
-def _process_read_without_indel(read: pysam.AlignedSegment, consensus: Dict[int, Dict]) -> None:
+def _process_read_without_indel(read: pysam.AlignedSegment, consensus: dict[int, dict]) -> None:
     """Process a read without insertions or deletions."""
     sequence = read.query_sequence
     qual = read.query_qualities
     if sequence is None or qual is None:
         return
-        
+
     for qpos, refpos in read.get_aligned_pairs(matches_only=True):
         base = sequence[qpos]
         # Pysam qualities are already integers, no need for ord() - 33 if using query_qualities
@@ -317,12 +317,12 @@ def _process_read_without_indel(read: pysam.AlignedSegment, consensus: Dict[int,
         _add_base_to_consensus(consensus, refpos, base, qual[qpos])
 
 
-def _process_read_with_indel(read: pysam.AlignedSegment, consensus: Dict[int, Dict]) -> None:
+def _process_read_with_indel(read: pysam.AlignedSegment, consensus: dict[int, dict]) -> None:
     """Process a read that contains insertions or deletions."""
     positions = read.get_aligned_pairs(matches_only=True)
     if not positions:
         return
-        
+
     q_prev, ref_prev = positions[0]
     q_prev -= 1
     ref_prev -= 1
@@ -368,9 +368,9 @@ def _process_read_with_indel(read: pysam.AlignedSegment, consensus: Dict[int, Di
         ref_prev = refpos
 
 
-def _build_consensus_dict(group_seqs: List[pysam.AlignedSegment]) -> Dict[int, Dict]:
+def _build_consensus_dict(group_seqs: list[pysam.AlignedSegment]) -> dict[int, dict]:
     """Build consensus dictionary from a group of reads."""
-    consensus: Dict[int, Dict] = {}
+    consensus: dict[int, dict] = {}
     for read in group_seqs:
         if read.cigarstring:
             if "I" not in read.cigarstring and "D" not in read.cigarstring:
@@ -380,7 +380,7 @@ def _build_consensus_dict(group_seqs: List[pysam.AlignedSegment]) -> Dict[int, D
     return consensus
 
 
-def _get_consensus_base_simple(consensus_pos: Dict, poscov: int) -> Tuple[str, int]:
+def _get_consensus_base_simple(consensus_pos: dict, poscov: int) -> tuple[str, int]:
     """Calculate consensus base (simple majority or prob based on coverage)."""
     if poscov < COVERAGE_THRESHOLD_FOR_SIMPLE_CONSENSUS:
         return calc_consensus_probabilities(consensus_pos)
@@ -390,7 +390,7 @@ def _get_consensus_base_simple(consensus_pos: Dict, poscov: int) -> Tuple[str, i
 
 
 def get_consensus_position_based(
-    group_seqs: List[pysam.AlignedSegment],
+    group_seqs: list[pysam.AlignedSegment],
     contig: str,
     regionid: str,
     indel_freq_threshold: float,
@@ -406,7 +406,7 @@ def get_consensus_position_based(
     consensus_sorted = sorted(consensus)
     consread = None
     add_consensus = True
-    deletion_skip_positions: List[int] = []
+    deletion_skip_positions: list[int] = []
     prevpos = consensus_sorted[0] - 1
 
     for pos in consensus_sorted:
@@ -415,7 +415,7 @@ def get_consensus_position_based(
             continue
 
         poscov = get_position_coverage(consensus[pos])
-        
+
         # Initialize consensus read if first position
         if not consread:
             consread = ConsensusRead(contig, regionid, pos, umi_info.centroid, umi_info.count)
@@ -430,26 +430,26 @@ def get_consensus_position_based(
         # Logic for Insertion
         if "I" in consensus[pos] and poscov >= 2:
             cons_dict = consensus[pos]["I"]
-            cons_allele = max(cons_dict, key=cons_dict.get) # type: ignore
+            cons_allele = max(cons_dict, key=cons_dict.get)  # type: ignore
             cons_num = cons_dict[cons_allele]
             percent = (cons_num / poscov) * 100.0
-            
+
             if percent >= indel_freq_threshold:
                 consread.add_insertion(cons_allele)
-            
+
             # Remove insertion info to proceed with base calculation
             # Note: This follows original logic where base at insertion site is also processed
             del consensus[pos]["I"]
-            
+
             cons_base, cons_qual = _get_consensus_base_simple(consensus[pos], poscov)
-            
+
             if not cons_base.startswith("D"):
                 consread.add_base(cons_base, get_ascii(cons_qual))
 
         # Logic for Deletion
         elif "D" in consensus[pos] and poscov >= 2:
             allele, percent = get_most_common_allele(consensus[pos])
-            
+
             if allele.startswith("D"):
                 if percent >= indel_freq_threshold:
                     dellength = int(allele.lstrip("D"))
@@ -473,37 +473,37 @@ def get_consensus_position_based(
         # Logic for Match/Mismatch
         elif poscov >= 2:
             cons_base, cons_qual = _get_consensus_base_simple(consensus[pos], poscov)
-            
+
             if consensus_freq_threshold:
                 # Check frequency threshold
                 if len(consensus[pos]) == 1:
-                     consread.add_base(cons_base, get_ascii(cons_qual))
+                    consread.add_base(cons_base, get_ascii(cons_qual))
                 elif cons_base in consensus[pos]:
-                     count_base = len(consensus[pos][cons_base])
-                     percent = (count_base / len(group_seqs)) * 100.0
-                     if percent >= consensus_freq_threshold:
-                         consread.add_base(cons_base, get_ascii(cons_qual))
-                     else:
-                         consread.add_base("X", get_ascii(0))
-                         add_consensus = False
+                    count_base = len(consensus[pos][cons_base])
+                    percent = (count_base / len(group_seqs)) * 100.0
+                    if percent >= consensus_freq_threshold:
+                        consread.add_base(cons_base, get_ascii(cons_qual))
+                    else:
+                        consread.add_base("X", get_ascii(0))
+                        add_consensus = False
                 else:
-                     consread.add_base("X", get_ascii(0))
-                     add_consensus = False
+                    consread.add_base("X", get_ascii(0))
+                    add_consensus = False
             else:
                 consread.add_base(cons_base, get_ascii(cons_qual))
-                
+
         else:
             # Low coverage (< 2)
             consread.add_base("N", get_ascii(0))
             if consread.is_split_read and consread.splits[-1] == pos - 1:
                 # extend gap
                 if isinstance(consread.splits[-1], int):
-                     consread.splits[-1] = pos
-                # Logic for extending split read in original code was: 
+                    consread.splits[-1] = pos
+                # Logic for extending split read in original code was:
                 # if consread.splits[-1] == pos - 1: consread.splits[-1] = pos
             else:
                 consread.split_read(pos, pos + 1)
-        
+
         prevpos = pos
 
     if add_consensus and consread:
@@ -511,12 +511,12 @@ def get_consensus_position_based(
             counts = Counter([x.query_sequence for x in group_seqs])
             consread.add_json_object(dict(counts))
         return consread
-    
+
     return None
 
 
 def get_consensus_most_common(
-    group_seqs: List[pysam.AlignedSegment],
+    group_seqs: list[pysam.AlignedSegment],
     contig: str,
     regionid: str,
     indel_freq_threshold: float,
@@ -530,27 +530,27 @@ def get_consensus_most_common(
     seqs = [x.query_sequence for x in group_seqs if x.query_sequence]
     if not seqs:
         return None
-        
+
     counts = Counter(seqs)
     most_common_seq, n = counts.most_common(1)[0]
     percentage = (n / total_seqs) * 100
-    
+
     if percentage >= consensus_freq_threshold:
         pos = min([x.reference_start for x in group_seqs if x.reference_start is not None])
         consread = ConsensusRead(contig, regionid, pos, umi_info.centroid, umi_info.count)
-        
+
         for base in most_common_seq:
             consread.add_base(base, get_ascii(MAX_PHRED_SCORE))
-            
+
         if output_json:
             consread.add_json_object(dict(counts))
         return consread
-        
+
     return None
 
 
 def get_consensus_msa(
-    group_seqs: List[pysam.AlignedSegment],
+    group_seqs: list[pysam.AlignedSegment],
     contig: str,
     regionid: str,
     indel_frequency_threshold: float,
@@ -559,33 +559,29 @@ def get_consensus_msa(
     output_json: bool,
 ) -> Optional[ConsensusRead]:
     """Generate consensus using Multiple Sequence Alignment (MAFFT)."""
-    
+
     # Dependency check
     if not is_tool("mafft"):
         raise RuntimeError("MAFFT is not installed or not in PATH. Please install MAFFT to use MSA consensus.")
 
-    with tempfile.NamedTemporaryFile(mode='w+', encoding='utf-8') as f:
+    with tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8") as f:
         for a in group_seqs:
             name = a.query_name
             seq = a.query_sequence
             if seq:
                 f.write(f">{name}\n{seq}\n")
         f.flush()
-        
+
         try:
             # Use text mode for subprocess to avoid bytes handling issues
-            output = subprocess.check_output(
-                ["mafft", "--quiet", f.name], 
-                text=True, 
-                stderr=subprocess.PIPE
-            )
+            output = subprocess.check_output(["mafft", "--quiet", f.name], text=True, stderr=subprocess.PIPE)
         except subprocess.CalledProcessError as e:
             # Log warning or re-raise? For now, re-raise with context
             raise RuntimeError(f"MAFFT execution failed: {e.stderr}") from e
 
-    sequences: List[str] = []
-    current_seq_parts: List[str] = []
-    
+    sequences: list[str] = []
+    current_seq_parts: list[str] = []
+
     for line in output.split("\n"):
         line = line.strip()
         if not line:
@@ -602,9 +598,9 @@ def get_consensus_msa(
     if not sequences:
         return None
 
-    consensus: Dict[int, Counter] = {}
+    consensus: dict[int, Counter] = {}
     seq_len = len(sequences[0])
-    
+
     for seq in sequences:
         # Check if MSA produced equal length sequences (it should)
         if len(seq) != seq_len:
@@ -618,37 +614,37 @@ def get_consensus_msa(
     consread = ConsensusRead(contig, regionid, pos, umi_info.centroid, umi_info.count)
     add_consensus = True
     n = len(sequences)
-    
+
     for i in sorted(consensus):
         b = consensus[i].most_common(1)[0]
         fraction = (b[1] / n) * 100
         base_char = b[0]
-        
+
         if base_char != "-":
             if fraction >= consensus_freq_threshold:
                 consread.add_base(base_char, get_ascii(MAX_PHRED_SCORE))
             else:
                 consread.add_base("N", get_ascii(0))
                 add_consensus = False
-                
+
     if add_consensus:
         if output_json:
             counts = Counter([x.query_sequence for x in group_seqs if x.query_sequence])
             consread.add_json_object(dict(counts))
         return consread
-        
+
     return None
 
 
 def get_all_consensus(
-    position_matrix: Dict[str, List[pysam.AlignedSegment]],
-    umis: Dict[str, "umi_cluster"],
+    position_matrix: dict[str, list[pysam.AlignedSegment]],
+    umis: dict[str, "umi_cluster"],
     contig: str,
     regionid: str,
     indel_frequency_cutoff: float,
     consensus_frequency_cutoff: float,
     output_json: bool,
-) -> Dict[str, Optional[ConsensusRead]]:
+) -> dict[str, Optional[ConsensusRead]]:
     """Get the consensus sequences for all umis (position-based)."""
     consensuses = {}
     for umi, reads in position_matrix.items():
@@ -665,14 +661,14 @@ def get_all_consensus(
 
 
 def get_all_consensus_most_common(
-    position_matrix: Dict[str, List[pysam.AlignedSegment]],
-    umis: Dict[str, "umi_cluster"],
+    position_matrix: dict[str, list[pysam.AlignedSegment]],
+    umis: dict[str, "umi_cluster"],
     contig: str,
     regionid: str,
     indel_frequency_cutoff: float,
     consensus_frequency_cutoff: float,
     output_json: bool,
-) -> Dict[str, Optional[ConsensusRead]]:
+) -> dict[str, Optional[ConsensusRead]]:
     """Get the consensus sequences for all umis (most common sequence)."""
     consensus_seq = {}
     for umi, reads in position_matrix.items():
@@ -689,14 +685,14 @@ def get_all_consensus_most_common(
 
 
 def get_all_consensus_msa(
-    position_matrix: Dict[str, List[pysam.AlignedSegment]],
-    umis: Dict[str, "umi_cluster"],
+    position_matrix: dict[str, list[pysam.AlignedSegment]],
+    umis: dict[str, "umi_cluster"],
     contig: str,
     regionid: str,
     indel_frequency_cutoff: float,
     consensus_frequency_cutoff: float,
     output_json: bool,
-) -> Dict[str, Optional[ConsensusRead]]:
+) -> dict[str, Optional[ConsensusRead]]:
     """Get the consensus sequences for all umis (MSA based)."""
     consensus_seq = {}
     for umi, reads in position_matrix.items():
@@ -713,30 +709,25 @@ def get_all_consensus_msa(
 
 
 def get_cons_dict(
-    bamfilename: str, 
-    umis: Dict[str, "umi_cluster"], 
-    contig: str, 
-    start: int, 
-    end: int, 
-    include_singletons: bool
-) -> Tuple[Dict[str, List[pysam.AlignedSegment]], Dict[str, pysam.AlignedSegment]]:
+    bamfilename: str, umis: dict[str, "umi_cluster"], contig: str, start: int, end: int, include_singletons: bool
+) -> tuple[dict[str, list[pysam.AlignedSegment]], dict[str, pysam.AlignedSegment]]:
     """Read BAM file and group reads by UMI cluster."""
-    position_matrix: Dict[str, List[pysam.AlignedSegment]] = {}
-    singleton_matrix: Dict[str, pysam.AlignedSegment] = {}
-    
+    position_matrix: dict[str, list[pysam.AlignedSegment]] = {}
+    singleton_matrix: dict[str, pysam.AlignedSegment] = {}
+
     with pysam.AlignmentFile(bamfilename, "rb") as f:
         alignment = f.fetch(contig, start, end)
         for read in alignment:
             # Use rsplit with maxsplit=1 - more efficient than split(":")[-1]
             barcode = read.qname.rsplit(":", 1)[-1]
             pos = read.reference_start
-            
+
             if pos is not None and start <= pos <= end:
                 umi_info = umis.get(barcode)
                 if umi_info is not None:
                     cluster = umi_info.centroid
                     cluster_size = umi_info.count
-                    
+
                     if cluster_size > 1:
                         if cluster not in position_matrix:
                             position_matrix[cluster] = []
@@ -745,14 +736,12 @@ def get_cons_dict(
                         # For singletons, just keep one read (logic from original code)
                         if cluster not in singleton_matrix:
                             singleton_matrix[cluster] = read
-                            
+
     return (position_matrix, singleton_matrix)
 
 
 def write_singleton_reads(
-    singleton_matrix: Dict[str, pysam.AlignedSegment], 
-    region_id: str, 
-    g: pysam.AlignmentFile
+    singleton_matrix: dict[str, pysam.AlignedSegment], region_id: str, g: pysam.AlignmentFile
 ) -> None:
     """Write singleton reads directly to the output BAM."""
     for umi, read in singleton_matrix.items():

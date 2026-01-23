@@ -2,11 +2,11 @@
 
 import pytest
 from umierrorcorrect.core.consensus import (
+    ConsensusRead,
     _phred_to_error,
     _phred_to_prob,
     calc_consensus,
     calc_consensus_probabilities,
-    ConsensusRead,
     get_ascii,
     get_most_common_allele,
     get_phred,
