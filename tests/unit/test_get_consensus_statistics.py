@@ -140,14 +140,14 @@ class TestCalculateTargetCoverage:
         assert fsizes == original_fsizes
 
     def test_named_vs_unnamed_regions(self):
-        """Test that only named regions contribute to target coverage."""
+        """Test that named and unnamed regions are tracked separately."""
         fsizes = list(DEFAULT_FAMILY_SIZES)[1:]
 
-        # Named region
+        # Named region (on-target)
         named = RegionConsensusStats("1", "chr1:100-200", "gene1", 0, fsizes)
         named.add_family_sizes([10], fsizes)
 
-        # Unnamed region
+        # Unnamed region (off-target)
         unnamed = RegionConsensusStats("2", "chr1:300-400", "", 0, fsizes)
         unnamed.add_family_sizes([10], fsizes)
 
@@ -155,14 +155,18 @@ class TestCalculateTargetCoverage:
         lines = output.split("\n")
 
         # First line is threshold 0
+        # Format: family_size, on_target, off_target, total, on_target_frac, off_target_frac
         parts = lines[0].split("\t")
-        target_reads = int(parts[1])
-        all_reads = int(parts[2])
+        on_target = int(parts[1])
+        off_target = int(parts[2])
+        total = int(parts[3])
 
-        # At threshold 0, target_reads should be total reads in named regions (10)
-        # and all_reads should be total reads in all regions (20)
-        assert target_reads == 10
-        assert all_reads == 20
+        # At threshold 0, on_target should be reads in named regions (10)
+        # off_target should be reads in unnamed regions (10)
+        # and total should be all reads (20)
+        assert on_target == 10
+        assert off_target == 10
+        assert total == 20
 
     def test_empty_stats(self):
         """Test with empty statistics list."""
