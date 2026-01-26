@@ -174,11 +174,15 @@ def consensus(
 def stats(
     output: Annotated[Path, typer.Option("-o", "--output", help="Path to output directory.")],
     cons_bam: Annotated[Optional[Path], typer.Option("-c", "--cons-bam", help="Path to consensus BAM file.")] = None,
-    stats_file: Annotated[Optional[Path], typer.Option("--stats", help="Path to consensus statistics file.")] = None,
+    bed_file: Annotated[Optional[Path], typer.Option("-bed", "--bed-file", help="Path to BED file for region annotations.")] = None,
     sample_name: Annotated[Optional[str], typer.Option("-s", "--sample-name", help="Sample name.")] = None,
     output_raw: Annotated[bool, typer.Option("--raw", help="Output raw consensus group counts.")] = False,
 ) -> None:
-    """Generate consensus statistics from processed BAM files."""
+    """Generate consensus statistics from processed BAM files.
+
+    Statistics are derived directly from the consensus BAM file - no separate
+    stats file is required.
+    """
     from umierrorcorrect.get_consensus_statistics import run_get_consensus_statistics
 
     # Set up file logging
@@ -191,7 +195,7 @@ def stats(
     run_get_consensus_statistics(
         str(output),
         str(cons_bam) if cons_bam else None,
-        str(stats_file) if stats_file else None,
+        str(bed_file) if bed_file else None,
         output_raw,
         sample_name,
     )
@@ -308,11 +312,24 @@ def filter_cons(
 def downsampling(
     output: Annotated[Path, typer.Option("-o", "--output", help="Path to output directory.")],
     cons_bam: Annotated[Optional[Path], typer.Option("-c", "--cons-bam", help="Path to consensus BAM file.")] = None,
-    stats_file: Annotated[Optional[Path], typer.Option("--stats", help="Path to consensus statistics file.")] = None,
+    bed_file: Annotated[Optional[Path], typer.Option("-bed", "--bed-file", help="Path to BED file for region annotations.")] = None,
     sample_name: Annotated[Optional[str], typer.Option("-s", "--sample-name", help="Sample name.")] = None,
-    fsize: Annotated[int, typer.Option("-f", "--fsize", help="Family size cutoff for downsampling.")] = 3,
+    fsizes: Annotated[
+        str, typer.Option("-f", "--fsizes", help="Comma-separated family size thresholds to plot (e.g., '1,2,3,5').")
+    ] = "1,2,3,5",
 ) -> None:
-    """Generate downsampling analysis plots."""
+    """Generate downsampling analysis plots.
+
+    Creates a saturation curve showing the number of UMI families observed at different
+    sequencing depths. Multiple family size thresholds can be plotted to compare how
+    different minimum family sizes affect saturation.
+
+    Statistics are derived directly from the consensus BAM file - no separate
+    stats file is required.
+
+    A plateau in the curve indicates sequencing saturation - additional sequencing
+    would not discover significantly more UMI families.
+    """
     from umierrorcorrect.downsampling import run_downsampling
 
     # Set up file logging
@@ -321,12 +338,15 @@ def downsampling(
     add_file_handler(log_path)
     logger.info(f"Logging to {log_path}")
 
+    # Parse comma-separated family sizes
+    plot_fsizes = [int(f.strip()) for f in fsizes.split(",")]
+
     logger.info("Generating downsampling plots")
     run_downsampling(
         str(output),
         str(cons_bam) if cons_bam else None,
-        str(stats_file) if stats_file else None,
-        fsize,
+        str(bed_file) if bed_file else None,
+        plot_fsizes,
         sample_name,
     )
     logger.info("Downsampling analysis complete!")

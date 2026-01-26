@@ -3,8 +3,10 @@
 from umierrorcorrect.core.constants import DEFAULT_FAMILY_SIZES
 from umierrorcorrect.get_consensus_statistics import (
     RegionConsensusStats,
+    RegionStats,
     calculate_target_coverage,
     get_overall_statistics,
+    parse_consensus_read_name,
 )
 
 
@@ -215,3 +217,169 @@ class TestGetOverallStatistics:
 
         assert overall.total_reads[0] == 0
         assert overall.umis[0] == 0
+
+
+class TestRegionStats:
+    """Tests for the RegionStats dataclass."""
+
+    def test_basic_properties(self):
+        """Test basic RegionStats properties."""
+        stats = RegionStats(
+            chrom="chr1",
+            start=100,
+            end=200,
+            name="gene1",
+            consensus_counts=[5, 3, 10],
+            singleton_count=2
+        )
+
+        assert stats.chrom == "chr1"
+        assert stats.start == 100
+        assert stats.end == 200
+        assert stats.name == "gene1"
+        assert stats.consensus_counts == [5, 3, 10]
+        assert stats.singleton_count == 2
+
+    def test_position_property(self):
+        """Test the position property."""
+        stats = RegionStats(chrom="chr1", start=100, end=200)
+        assert stats.position == "chr1:100-200"
+
+    def test_total_consensus(self):
+        """Test total_consensus property."""
+        stats = RegionStats(
+            chrom="chr1",
+            start=100,
+            end=200,
+            consensus_counts=[5, 3, 10]
+        )
+        assert stats.total_consensus == 3
+
+    def test_total_raw_reads(self):
+        """Test total_raw_reads property."""
+        stats = RegionStats(
+            chrom="chr1",
+            start=100,
+            end=200,
+            consensus_counts=[5, 3, 10],
+            singleton_count=2
+        )
+        # 5 + 3 + 10 + 2 = 20
+        assert stats.total_raw_reads == 20
+
+    def test_umis_at_threshold(self):
+        """Test umis_at_threshold method."""
+        stats = RegionStats(
+            chrom="chr1",
+            start=100,
+            end=200,
+            consensus_counts=[5, 3, 10, 2, 1],
+            singleton_count=2
+        )
+
+        # Threshold 1: all consensus (5) + singletons (2) = 7
+        assert stats.umis_at_threshold(1) == 7
+
+        # Threshold 2: [5, 3, 10, 2] = 4
+        assert stats.umis_at_threshold(2) == 4
+
+        # Threshold 5: [5, 10] = 2
+        assert stats.umis_at_threshold(5) == 2
+
+        # Threshold 10: [10] = 1
+        assert stats.umis_at_threshold(10) == 1
+
+    def test_reads_at_threshold(self):
+        """Test reads_at_threshold method."""
+        stats = RegionStats(
+            chrom="chr1",
+            start=100,
+            end=200,
+            consensus_counts=[5, 3, 10],
+            singleton_count=2
+        )
+
+        # Threshold 1: 5 + 3 + 10 + 2 = 20
+        assert stats.reads_at_threshold(1) == 20
+
+        # Threshold 3: 5 + 3 + 10 = 18
+        assert stats.reads_at_threshold(3) == 18
+
+        # Threshold 5: 5 + 10 = 15
+        assert stats.reads_at_threshold(5) == 15
+
+
+class TestParseConsensusReadName:
+    """Tests for parse_consensus_read_name function."""
+
+    def test_consensus_read(self):
+        """Test parsing a consensus read name."""
+        read_type, count = parse_consensus_read_name(
+            "Consensus_read_0_TTGTAAAGCATGAAATAGC_Count=144"
+        )
+        assert read_type == "Consensus"
+        assert count == 144
+
+    def test_consensus_read_with_subcluster(self):
+        """Test parsing a consensus read name with subcluster tag."""
+        read_type, count = parse_consensus_read_name(
+            "Consensus_read_0_TTGTAAAGCATGAAATAGC_a_Count=144"
+        )
+        assert read_type == "Consensus"
+        assert count == 144
+
+    def test_singleton_read(self):
+        """Test parsing a singleton read name."""
+        read_type, count = parse_consensus_read_name(
+            "Singleton_read_0_AAGAAAAGCAAGAAATGGT_Count=1"
+        )
+        assert read_type == "Singleton"
+        assert count == 1
+
+
+class TestRegionConsensusStatsFromRegionStats:
+    """Tests for RegionConsensusStats.from_region_stats factory method."""
+
+    def test_from_region_stats_basic(self):
+        """Test creating RegionConsensusStats from RegionStats."""
+        region = RegionStats(
+            chrom="chr1",
+            start=100,
+            end=200,
+            name="gene1",
+            consensus_counts=[5, 3],
+            singleton_count=2
+        )
+        fsizes = [1, 2, 3, 5]
+
+        stat = RegionConsensusStats.from_region_stats(region, fsizes)
+
+        assert stat.regionid == "chr1:100"
+        assert stat.pos == "chr1:100-200"
+        assert stat.name == "gene1"
+        assert stat.singletons == 2
+        assert stat.family_sizes == [5, 3]
+
+    def test_from_region_stats_counts(self):
+        """Test that counts are calculated correctly."""
+        region = RegionStats(
+            chrom="chr1",
+            start=100,
+            end=200,
+            consensus_counts=[5, 3, 2],
+            singleton_count=2
+        )
+        fsizes = [1, 2, 3, 5]
+
+        stat = RegionConsensusStats.from_region_stats(region, fsizes)
+
+        # Total reads at threshold 0: 5+3+2 + 2 singletons = 12
+        assert stat.total_reads[0] == 12
+
+        # At threshold 2: families [5,3,2] pass = 10 reads
+        assert stat.total_reads[2] == 10
+        assert stat.umis[2] == 3
+
+        # At threshold 3: families [5,3] pass = 8 reads
+        assert stat.total_reads[3] == 8
+        assert stat.umis[3] == 2

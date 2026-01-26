@@ -12,7 +12,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-from umierrorcorrect.core.constants import DEFAULT_FAMILY_SIZES, HISTOGRAM_SUFFIX
+from umierrorcorrect.core.constants import DEFAULT_FAMILY_SIZES
 from umierrorcorrect.core.logging_config import get_logger
 from umierrorcorrect.get_consensus_statistics import (
     RegionConsensusStats,
@@ -22,28 +22,46 @@ from umierrorcorrect.get_consensus_statistics import (
 logger = get_logger(__name__)
 
 
-def plot_downsampling(results_tot, fsize, plot_filename):
-    """Generate a downsampling plot showing depth vs UMI family count.
+def plot_downsampling(results_tot, fsizes, plot_filename):
+    """Generate a downsampling plot showing total sequencing depth vs UMI family count.
+
+    Plots a separate line for each family size threshold, allowing comparison of
+    how different thresholds affect saturation curves.
 
     Args:
         results_tot: List of dictionaries containing downsampled statistics.
-        fsize: Family size cutoff to use for plotting.
+        fsizes: List of family size thresholds to plot (e.g., [1, 2, 3, 5]).
         plot_filename: Path to save the output plot.
     """
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    # Get total sequencing depth for X-axis (same for all fsizes)
     x = []
-    y = []
-    for r in results_tot[0]:
+    for r in sorted(results_tot[0].keys()):
         h = results_tot[0][r]
-        x.append(h.total_reads[int(fsize)])
-        y.append(h.umis[int(fsize)])
-    plt.plot(x, y, "o-")
-    plt.xlabel("Depth")
-    plt.ylabel("Number of UMI families")
-    plt.title("Downsampling plot")
-    plt.box(False)
-    plt.xlim(0, max(x) + 40000)
-    plt.ylim(0, max(y) + 1000)
-    plt.savefig(plot_filename)
+        x.append(h.total_reads[0])  # Total reads regardless of family size
+
+    max_y = 0
+    for fsize in fsizes:
+        y = []
+        for r in sorted(results_tot[0].keys()):
+            h = results_tot[0][r]
+            y.append(h.umis[int(fsize)])
+        ax.plot(x, y, "o-", label=f"Family size ≥{fsize}")
+        max_y = max(max_y, max(y) if y else 0)
+
+    ax.set_xlabel("Total Sequencing Depth (reads)")
+    ax.set_ylabel("Number of UMI Families")
+    ax.set_title("Downsampling Saturation Analysis")
+    ax.legend(loc="lower right")
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.set_xlim(0, max(x) * 1.05 if x else 1)
+    ax.set_ylim(0, max_y * 1.1 if max_y > 0 else 1)
+
+    plt.tight_layout()
+    plt.savefig(plot_filename, dpi=150)
+    plt.close(fig)
 
 
 def save_downsampled_table(all_results, tot_results, out_filename):
@@ -73,7 +91,7 @@ def downsample_reads_per_region(hist, _fraction, fsizes, onlyNamed=True):
 
     Args:
         hist: List of region_cons_stat objects with histogram data.
-        _fraction: Unused parameter (downsample rates are hardcoded).
+        _fraction: List of downsample rates.
         fsizes: List of family sizes to calculate statistics for.
         onlyNamed: If True, only process regions with names.
 
@@ -81,7 +99,6 @@ def downsample_reads_per_region(hist, _fraction, fsizes, onlyNamed=True):
         List of dictionaries mapping downsample rates to region_cons_stat objects.
     """
     all_results = []
-    downsample_rates = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
     for h in hist:
         run_analysis = True
         if onlyNamed and h.name == "":
@@ -105,7 +122,7 @@ def downsample_reads_per_region(hist, _fraction, fsizes, onlyNamed=True):
             reads = np.repeat(tmpnames, times, axis=0)  # expand to one entry per read
             reads = list(reads) + singnames
             results = {}
-            for r in downsample_rates:
+            for r in _fraction:
                 # At 50% (r=0.5), we'd sample 10 random reads out of 20 total. Let's say we get:
                 # ds_reads = [0, 0, 0, 1, 2, 2, 2, 2, 2, 3]
                 ds_reads = random.sample(list(reads), round(r * len(reads)))  # noqa: S311 - downsample
@@ -114,45 +131,58 @@ def downsample_reads_per_region(hist, _fraction, fsizes, onlyNamed=True):
                 # new_hist = [3, 1, 5, 1] (sorted descending: [5, 3, 1, 1])
                 new_hist = sorted(new_hist, reverse=True)  # sort
                 new_singletons = list(new_hist).count(1)  # count singletons in new
+                # Separate consensus families (≥2 reads) from singletons to avoid double-counting
+                # RegionConsensusStats expects singletons passed separately to constructor,
+                # and only consensus families passed to add_family_sizes()
+                consensus_hist = [x for x in new_hist if x > 1]
                 new_stat = RegionConsensusStats(h.regionid, h.pos, h.name, new_singletons, h.fsizes)
-                new_stat.add_family_sizes(new_hist, fsizes)
+                new_stat.add_family_sizes(consensus_hist, fsizes)
                 results[r] = new_stat
             all_results.append(results)
     return all_results
 
 
-def run_downsampling(output_path, consensus_filename, stat_filename, fsize, samplename=None):
+def run_downsampling(output_path, consensus_bam, bed_file=None, plot_fsizes=None, samplename=None):
     """Run downsampling analysis and generate output files.
 
     Args:
         output_path: Directory for output files.
-        consensus_filename: Path to consensus BAM file (auto-detected if None).
-        stat_filename: Path to histogram file (auto-detected if None).
-        fsize: Family size cutoff for downsampling plot.
+        consensus_bam: Path to consensus BAM file (auto-detected if None).
+        bed_file: Optional path to BED file for region annotations.
+        plot_fsizes: List of family size thresholds to plot (default: [1, 2, 3, 5]).
         samplename: Sample name for output files (auto-detected if None).
     """
-    logger.info("Getting consensus statistics")
+    if plot_fsizes is None:
+        plot_fsizes = [1, 2, 3, 5]
+
+    logger.info("Running downsampling analysis")
     out_path = Path(output_path)
 
-    if not consensus_filename:
-        consensus_filename = str(list(out_path.glob("*_consensus_reads.bam"))[0])
+    if not consensus_bam:
+        bam_files = list(out_path.glob("*_consensus_reads.bam"))
+        if not bam_files:
+            raise FileNotFoundError(f"No consensus BAM file found in {out_path}")
+        consensus_bam = str(bam_files[0])
     if not samplename:
-        samplename = Path(consensus_filename).name.replace("_consensus_reads.bam", "")
-    if not stat_filename:
-        stat_filename = str(out_path / f"{samplename}{HISTOGRAM_SUFFIX}")
+        samplename = Path(consensus_bam).name.replace("_consensus_reads.bam", "")
 
-    hist = get_stat(consensus_filename, stat_filename)
+    # Get stats directly from BAM (no stats file needed)
+    region_stats_list = get_stat(consensus_bam, bed_file)
     fsizes = list(DEFAULT_FAMILY_SIZES)[1:]  # Exclude 0, which is handled separately
     tot_results = RegionConsensusStats("All", "all_regions", "", 0, fsizes)
-    for h in hist:
-        # print(h.family_sizes)
+
+    for h in region_stats_list:
         tot_results.family_sizes = tot_results.family_sizes + h.family_sizes
         tot_results.singletons += h.singletons
 
-    downsample_rates = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+    downsample_rates = [x * 0.1 for x in range(1, 11)]  # 0.1 to 1.0
     tot = downsample_reads_per_region([tot_results], downsample_rates, fsizes, False)
-    all_results = downsample_reads_per_region(hist, downsample_rates, fsizes, True)
+    all_results = downsample_reads_per_region(region_stats_list, downsample_rates, fsizes, True)
+
     filename = str(out_path / f"{samplename}_downsampled_coverage.txt")
     save_downsampled_table(all_results, tot, filename)
+
     filename = str(out_path / f"{samplename}_downsampled_plot.png")
-    plot_downsampling(tot, fsize, filename)
+    logger.info(f"Generating downsampling plot with family size thresholds: {plot_fsizes}")
+    plot_downsampling(tot, plot_fsizes, filename)
+    logger.info(f"Downsampling plot saved to {filename}")

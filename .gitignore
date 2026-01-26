@@ -17,6 +17,7 @@ results*/
 .claude/
 CLAUDE.md
 test_data/
+notebooks/
 
 # Distribution / packaging
 .Python

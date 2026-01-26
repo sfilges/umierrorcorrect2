@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.30.3] - 2026-01-26
+
+### Changed
+
+- **Stats Extraction Refactored**: Statistics are now derived entirely from the consensus BAM file, eliminating the need for separate `.stats` files during processing.
+  - `get_stat()` now takes a BAM file and optional BED file (instead of BAM + stats file)
+  - `run_get_consensus_statistics()` updated to use BAM-only approach
+  - `run_downsampling()` updated to use BAM-only approach
+  - CLI `stats` and `downsampling` commands: replaced `--stats` parameter with `--bed-file/-bed`
+- **Stats Output**: The `_consensus_stats.tsv` file now reports statistics per unique read start position rather than per clustered region. This provides more granular output.
+- Updated dependency versions in `pyproject.toml`
+
+### Removed
+
+- Removed intermediate stats file generation from `cluster_consensus_worker()`
+- Removed `merge_tmp_stats_files()` function from `umi_error_correct.py`
+- Removed `merge_duplicate_stat()` function from `umi_error_correct.py`
+
+### Added
+
+- New `RegionStats` dataclass for BAM-derived statistics
+- New `parse_consensus_read_name()` function for parsing consensus read names
+- New `get_stats_from_bam()` function for extracting stats directly from BAM
+- New `write_stats_file()` function for backward-compatible stats file output
+- New `RegionConsensusStats.from_region_stats()` factory method
+- Added unit tests for new statistics extraction functions
+
 ## [0.30.2] - 2026-01-24
 
 ### Fixed
@@ -58,6 +85,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed path handling issues using `pathlib`.
 
 ---
+[0.30.3]: https://github.com/sfilges/umierrorcorrect2/releases/tag/v0.30.3
 [0.30.2]: https://github.com/sfilges/umierrorcorrect2/releases/tag/v0.30.2
 [0.30.1]: https://github.com/sfilges/umierrorcorrect2/releases/tag/v0.30.1
 [0.30.0]: https://github.com/sfilges/umierrorcorrect2/releases/tag/v0.30.0

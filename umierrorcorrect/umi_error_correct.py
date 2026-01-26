@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import re
 import shutil
 import subprocess
 import tempfile
@@ -21,9 +20,9 @@ from umierrorcorrect.core.consensus import (
     get_reference_sequence,
     write_singleton_reads,
 )
-from umierrorcorrect.core.constants import DEFAULT_FAMILY_SIZES, HISTOGRAM_SUFFIX
+from umierrorcorrect.core.constants import DEFAULT_FAMILY_SIZES
 from umierrorcorrect.core.get_cons_info import calc_major_nonref_allele_frequency, get_cons_info, write_consensus
-from umierrorcorrect.core.get_regions_from_bed import get_overlap, merge_regions, read_bed, sort_regions
+from umierrorcorrect.core.get_regions_from_bed import merge_regions, read_bed, sort_regions
 from umierrorcorrect.core.group import read_bam_from_bed, read_bam_from_tag, readBam
 from umierrorcorrect.core.logging_config import get_logger
 from umierrorcorrect.core.umi_cluster import cluster_barcodes, get_connected_components, merge_clusters
@@ -127,26 +126,6 @@ def cluster_consensus_worker(args: tuple) -> None:
     else:  # empty file
         Path(consfilename).touch()
 
-    # Write to stats file
-    statfilename = outfilename.rstrip(".bam") + HISTOGRAM_SUFFIX
-    if len(cons) > 0:
-        with Path(statfilename).open("w") as g2:
-            name = get_overlap(annotations, start, endpos)
-            regionname = f"{contig}:{start}-{endpos}"
-            g2.write(
-                "\t".join(
-                    [
-                        str(regionid),
-                        regionname,
-                        name,
-                        "consensus_reads: " + str(num_cons),
-                        "singletons: " + str(len(singleton_matrix)),
-                    ]
-                )
-                + "\n"
-            )
-    else:  # Create empty file
-        Path(statfilename).touch()
 
 
 def update_bam_header(bamfile: str, samplename: str) -> dict[str, Any]:
@@ -369,69 +348,6 @@ def merge_tmp_cons_files(chrlist: Iterable[str], cons_file: str) -> None:
                 i += 1
     for filename in tmpfilelist:
         Path(filename).unlink()
-
-
-def merge_tmp_stats_files(output_path: str | Path, statfilelist: list[str], sample_name: str) -> None:
-    """Merge all stat files in statfilelist and remove temporary files."""
-    output_hist = Path(output_path) / f"{sample_name}{HISTOGRAM_SUFFIX}"
-    with output_hist.open("w") as g:
-        for filename in statfilelist:
-            with Path(filename).open() as f:
-                for line in f:
-                    g.write(line)
-
-    for filename in statfilelist:
-        Path(filename).unlink()
-
-
-def merge_duplicate_stat(stats_file: Path):
-    """Merge duplicate statistics entries in a stats file.
-
-    Args:
-        stats_file: Path to the stats file to process.
-    """
-    convert = lambda text: int(text) if text.isdigit() else text.lower()  # noqa: E731
-    alphanum_key = lambda key: [convert(c) for c in re.split("([0-9]+)", key)]  # noqa: E731
-    histfile = stats_file
-    regions = {}
-    # histfile
-    with histfile.open() as f:
-        for line in f:
-            line = line.rstrip()
-            parts = line.split("\t")
-            idx = parts[0]
-            chrx = parts[1].split(":")[0]
-            if chrx not in regions:
-                regions[chrx] = {}
-            pos = parts[1].split(":")[1].split("-")[0]
-            end = parts[1].split(":")[1].split("-")[1]
-            name = parts[2]
-            numcons = parts[3].split()[1]
-            numsing = parts[4].split()[1]
-            if pos not in regions[chrx]:
-                regions[chrx][pos] = (idx, int(pos), int(end), name, int(numcons), int(numsing))
-            else:
-                tmp = regions[chrx][pos]
-                if "-" in tmp[0]:
-                    newid = tmp[0].split("-")[0] + "-" + idx
-                else:
-                    newid = tmp[0] + "-" + idx
-                if int(end) > int(tmp[2]):
-                    newend = end
-                else:
-                    newend = tmp[2]
-                newnumcons = tmp[4] + int(numcons)
-                newnumsing = tmp[5] + int(numsing)
-                regions[chrx][pos] = (newid, tmp[1], newend, name, newnumcons, newnumsing)
-    histfile2 = Path(str(histfile) + "2")
-    with histfile2.open("w") as g:
-        for chrx in sorted(regions, key=alphanum_key):
-            for pos in regions[chrx]:
-                tmp = regions[chrx][pos]
-                g.write(
-                    f"{tmp[0]}\t{str(chrx)}:{tmp[1]}-{tmp[2]}\t{tmp[3]}\tconsensus_reads: {tmp[4]}\tsingletons: {tmp[5]}\n"
-                )
-    histfile2.rename(histfile)
 
 
 def index_bam_file(filename: str, num_threads: int = 1) -> None:
@@ -706,14 +622,16 @@ def run_umi_errorcorrect(config: UMIErrorCorrectConfig) -> None:
         if bam_path.exists():
             bam_path.unlink()
 
-    # Merge stats files and handle duplicates
-    statfilelist = [x.rstrip(".bam") + HISTOGRAM_SUFFIX for x in bamfilelist]
-    merge_tmp_stats_files(output_path, statfilelist, sample_name)
+    # Handle duplicate positions in cons file
     duppos = check_duplicate_positions(cons_file)
-    stats_file = output_path / f"{sample_name}{HISTOGRAM_SUFFIX}"
     if any(duppos.values()):
         merge_duplicate_positions_all_chromosomes(duppos, cons_file, num_cpus)
-    merge_duplicate_stat(stats_file)
+
+    # Generate stats file from consensus BAM (single source of truth)
+    from umierrorcorrect.get_consensus_statistics import get_stat, write_stats_file
+
+    stats = get_stat(consensus_bam, bed_file)
+    write_stats_file(stats, output_path, sample_name)
 
     logger.info(
         f"Consensus generation complete, output written to {output_path}/{sample_name}_consensus_reads.bam, "

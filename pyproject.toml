@@ -18,22 +18,21 @@ authors = [
 classifiers = [
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-    "pysam>=0.8.4",
+    "pysam>=0.20.0",
     "scipy",
     "matplotlib",
     "loguru>=0.7.0",
-    "typer>=0.9.0",
-    "pydantic>=2.0.0",
+    "typer>=0.21.1",
+    "pydantic>=2.12.0",
 ]
 [project.optional-dependencies]
 dev = ["ruff", "pytest", "pytest-cov", "mypy", "pre-commit"]
-docs = ["sphinx", "sphinx-rtd-theme"]
 fast = ["numba>=0.57.0"]
 
 [project.scripts]
