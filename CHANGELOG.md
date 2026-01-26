@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.30.4] - 2026-01-27
+
+### Changed
+
+- **Target Coverage**: `calculate_target_coverage()` now reports both on-target and off-target read counts and fractions. Output columns: family_size, on_target, off_target, total, on_target_fraction, off_target_fraction.
+- **Target Coverage Conditional**: The `_target_coverage.txt` file is now only generated when a BED file is provided, as the on/off-target distinction requires region annotations.
+- **Moved get_percent_mapped_reads** to utils.py. The function is not used anywhere else in the codebase right now.
+
 ## [0.30.3] - 2026-01-26
 
 ### Changed
@@ -59,6 +67,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.30.0] - 2026-01-23
 
+Initial release of umierrorcorrect2 (a fork of umierrorcorrect v0.29).
+
 ### Added
 
 - **Modern CLI**: Completely redesigned CLI using `typer` for better user experience and documentation.
@@ -85,6 +95,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed path handling issues using `pathlib`.
 
 ---
+[0.30.4]: https://github.com/sfilges/umierrorcorrect2/releases/tag/v0.30.4
 [0.30.3]: https://github.com/sfilges/umierrorcorrect2/releases/tag/v0.30.3
 [0.30.2]: https://github.com/sfilges/umierrorcorrect2/releases/tag/v0.30.2
 [0.30.1]: https://github.com/sfilges/umierrorcorrect2/releases/tag/v0.30.1

@@ -290,38 +290,45 @@ def write_stats_file(stats: list[RegionConsensusStats], output_path: Path, sampl
 
 
 def calculate_target_coverage(stats, fsizes=None):
-    """Calculate target coverage statistics.
+    """Calculate target coverage statistics for on-target and off-target reads.
 
     Args:
         stats (list): List of RegionConsensusStats objects.
         fsizes (list, optional): List of family size thresholds. Defaults to None.
 
     Returns:
-        str: Formatted string of target coverage statistics.
+        str: Formatted string of target coverage statistics with columns:
+            family_size, on_target, off_target, total, on_target_fraction, off_target_fraction
     """
     if fsizes is None:
         fsizes = stats[0].fsizes if stats else list(DEFAULT_FAMILY_SIZES)[1:]
 
     reads_all = {}
     reads_target = {}
+    reads_offtarget = {}
     fsizes_calc = fsizes.copy()
     fsizes_calc.insert(0, 0)
     for fsize in fsizes_calc:
         reads_all[fsize] = 0
         reads_target[fsize] = 0
+        reads_offtarget[fsize] = 0
     for region in stats:
         for fsize in fsizes_calc:
             reads_all[fsize] += region.umis[fsize]
-            if region.name not in "":
+            if region.name:
                 reads_target[fsize] += region.umis[fsize]
+            else:
+                reads_offtarget[fsize] += region.umis[fsize]
     lines = []
     for fsize in fsizes_calc:
         if reads_all[fsize] > 0:
+            on_target_frac = reads_target[fsize] / reads_all[fsize]
+            off_target_frac = reads_offtarget[fsize] / reads_all[fsize]
             lines.append(
-                f"{fsize}\t{reads_target[fsize]}\t{reads_all[fsize]}\t{1.0 * (reads_target[fsize] / reads_all[fsize])}"
+                f"{fsize}\t{reads_target[fsize]}\t{reads_offtarget[fsize]}\t{reads_all[fsize]}\t{on_target_frac}\t{off_target_frac}"
             )
         else:
-            lines.append(f"{fsize}\t{reads_target[fsize]}\t{reads_all[fsize]}\t{0}")
+            lines.append(f"{fsize}\t{reads_target[fsize]}\t{reads_offtarget[fsize]}\t{reads_all[fsize]}\t0\t0")
 
     return "\n".join(lines)
 
@@ -352,25 +359,6 @@ def get_overall_statistics(hist, fsizes=None):
             histall.total_reads[fsize] += region.total_reads[fsize]
             histall.umis[fsize] += region.umis[fsize]
     return histall
-
-
-def get_percent_mapped_reads(num_fastq_reads, bamfile):
-    """Get the number of mapped reads from the BAM index statistics.
-
-    Args:
-        num_fastq_reads (int): Total number of reads in the original FASTQ file.
-        bamfile (str): Path to the BAM file.
-
-    Returns:
-        tuple: A tuple containing (number of mapped reads, ratio of mapped reads).
-    """
-    with pysam.AlignmentFile(bamfile, "rb") as f:
-        stats = f.get_index_statistics()
-        num_mapped = 0
-        for s in stats:
-            num_mapped += s.mapped
-    ratio = (num_mapped / num_fastq_reads) * 1.0
-    return (num_mapped, ratio)
 
 
 def run_get_consensus_statistics(
@@ -410,10 +398,11 @@ def run_get_consensus_statistics(
         for stat in hist:
             g.write(stat.write_stats() + "\n")
 
-    # Write target coverage
-    outfilename = out_path / f"{samplename}_target_coverage.txt"
-    with outfilename.open("w") as g:
-        g.write(calculate_target_coverage(hist, fsizes))
+    # Write target coverage (only meaningful with a BED file for region annotations)
+    if bed_file:
+        outfilename = out_path / f"{samplename}_target_coverage.txt"
+        with outfilename.open("w") as g:
+            g.write(calculate_target_coverage(hist, fsizes))
 
     # Write raw group counts if requested
     if output_raw:

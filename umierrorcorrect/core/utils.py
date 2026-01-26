@@ -8,6 +8,26 @@ to avoid code duplication.
 import re
 from pathlib import Path
 from typing import Literal
+import pysam
+
+# TODO: This is currently not used, but should be used in the future
+def get_percent_mapped_reads(num_fastq_reads, bamfile):
+    """Get the number of mapped reads from the BAM index statistics.
+
+    Args:
+        num_fastq_reads (int): Total number of reads in the original FASTQ file.
+        bamfile (str): Path to the BAM file.
+
+    Returns:
+        tuple: A tuple containing (number of mapped reads, ratio of mapped reads).
+    """
+    with pysam.AlignmentFile(bamfile, "rb") as f:
+        stats = f.get_index_statistics()
+        num_mapped = 0
+        for s in stats:
+            num_mapped += s.mapped
+    ratio = (num_mapped / num_fastq_reads) * 1.0
+    return (num_mapped, ratio)
 
 
 def check_output_directory(outdir: str) -> str:
