@@ -21,8 +21,19 @@ This package is a **complete modernization** of the original [UMIErrorCorrect](h
 
 ## Dependencies
 
-- [fastp](https://github.com/OpenGene/fastp) for preprocessing
+### Mandatory
+
 - [bwa](https://github.com/lh3/bwa) for alignment
+
+### Optional
+
+- [fastp](https://github.com/OpenGene/fastp) for preprocessing
+- [fastqc](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/) for quality control
+- [multiqc](https://seqera.io/multiqc/) for quality control / report aggregation
+
+Fastp is **highly recommended**, but not mandatory, for preprocessing. If you do not have fastp installed or run with `--no-fastp`, the pipeline will use `cutadapt` for adapter trimming only.
+
+The `--no-qc` flag disables quality control steps. If QC is enabled (default) but fastqc or multiqc are not installed, the pipeline will raise a warning but finish successfully.
 
 ## Installation
 
@@ -47,16 +58,22 @@ umierrorcorrect batch \
     -r1 sample_R1.fastq.gz \
     -r2 sample_R2.fastq.gz \
     -r hg38.fa \
-    -o results/ \
-    -ul 12 \
-    -sl 16 \
-    --fastp
+    -o results/
+```
+
+Run the pipeline on multiple samples in a folder (searches recursively for FASTQ files):
+
+```bash
+umierrorcorrect batch \
+    -i folder_with_fastq_files/ \
+    -r hg38.fa \
+    -o results/
 ```
 
 For detailed instructions, see the **[User Guide](docs/USER_GUIDE.md)** or run:
 
 ```bash
-umierrorcorrect --help
+umierrorcorrect
 ```
 
 ## Documentation

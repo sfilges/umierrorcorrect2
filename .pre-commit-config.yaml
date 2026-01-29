@@ -1,0 +1,24 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check
+        entry: ./.venv/bin/ruff check --fix --force-exclude
+        language: system
+        types: [python]
+      - id: ruff-format
+        name: ruff format
+        entry: ./.venv/bin/ruff format --force-exclude
+        language: system
+        types: [python]
+      - id: mypy
+        name: mypy
+        entry: ./.venv/bin/mypy
+        language: system
+        types: [python]
+      - id: pytest
+        name: pytest
+        entry: ./.venv/bin/pytest
+        language: system
+        types: [python]
+        pass_filenames: false
