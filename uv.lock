@@ -2664,6 +2664,7 @@ dependencies = [
     { name = "loguru" },
     { name = "matplotlib" },
     { name = "multiqc" },
+    { name = "numba" },
     { name = "pydantic" },
     { name = "pysam" },
     { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -2679,9 +2680,6 @@ dev = [
     { name = "pytest-cov" },
     { name = "ruff" },
 ]
-fast = [
-    { name = "numba" },
-]
 
 [package.metadata]
 requires-dist = [
@@ -2690,7 +2688,7 @@ requires-dist = [
     { name = "matplotlib" },
     { name = "multiqc", specifier = ">=1.33" },
     { name = "mypy", marker = "extra == 'dev'" },
-    { name = "numba", marker = "extra == 'fast'", specifier = ">=0.57.0" },
+    { name = "numba", specifier = ">=0.57.0" },
     { name = "pre-commit", marker = "extra == 'dev'" },
     { name = "pydantic", specifier = ">=2.12.0" },
     { name = "pysam", specifier = ">=0.23.0" },
@@ -2700,7 +2698,7 @@ requires-dist = [
     { name = "scipy" },
     { name = "typer", specifier = ">=0.21.1" },
 ]
-provides-extras = ["dev", "fast"]
+provides-extras = ["dev"]
 
 [[package]]
 name = "urllib3"

@@ -5,6 +5,9 @@ from dataclasses import dataclass
 from operator import ne
 
 from umierrorcorrect.core.constants import SUBSTRING_OPTIMIZATION_THRESHOLD
+from umierrorcorrect.core.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 # Try to import numba for JIT-compiled hamming distance
 try:
@@ -43,9 +46,9 @@ def _hamming_original(a, b):
     try:
         assert len(a) == len(b)
         return sum(i != j for i, j in zip(a, b))
-    except AssertionError as error:
-        print(f"Barcode lengths are not equal for {a}. {b}")
-        raise (error)
+    except AssertionError:
+        logger.warning(f"Barcode lengths are not equal for {a} and {b}.")
+        raise
 
 
 def _hamming_native(a: str, b: str) -> int:
@@ -69,8 +72,10 @@ if _HAS_NUMBA:
         return _hamming_numba_core(a.encode(), b.encode())
 
     hamming_distance = _hamming_numba
+    _HAMMING_MSG = "Using Numba-accelerated Hamming distance."
 else:
     hamming_distance = _hamming_native
+    _HAMMING_MSG = "Using native Python Hamming distance."
 
 # ----------------------------------------------
 # UMI clustering functions
@@ -149,13 +154,12 @@ def get_adj_matrix_from_substring(
             neighbors = neighbors.union(substr_dict3[sub3])
             neighbors.remove(barcode)
             for neighbor in neighbors:
-                # comb.append( (barcode, neighbor))
                 yield barcode, neighbor
-    # return(comb)
 
 
 def cluster_barcodes(barcodedict: dict[str, int], edit_distance_threshold: int) -> dict[str, list[str]]:
     """Cluster barcodes by edit distance."""
+    logger.debug(_HAMMING_MSG)
     edit_distance_threshold = int(edit_distance_threshold)
     adj_matrix: dict[str, list[str]] = {}
     if len(barcodedict) > SUBSTRING_OPTIMIZATION_THRESHOLD:
@@ -164,8 +168,6 @@ def cluster_barcodes(barcodedict: dict[str, int], edit_distance_threshold: int) 
         comb = get_adj_matrix_from_substring(barcodedict, substring_matrix)
     else:
         comb = itertools.combinations(barcodedict.keys(), 2)
-    # print(comb)
-    # comb=itertools.combinations(barcodedict.keys(),2)
     for a, b in comb:
         if hamming_distance(a, b) <= edit_distance_threshold:
             if barcodedict[a] >= barcodedict[b]:
@@ -219,5 +221,4 @@ def merge_clusters(barcodedict: dict[str, int], clusters: list[list[str]]) -> di
                 umis[centroid].add_count(umis[neighbor].count)
             for neighbor in neighbors:
                 umis[neighbor] = umis[centroid]
-    # print(umis)
     return umis

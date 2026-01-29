@@ -32,10 +32,10 @@ dependencies = [
     "pydantic>=2.12.0",
     "cutadapt>=5.2",
     "multiqc>=1.33",
+    "numba>=0.57.0",
 ]
 [project.optional-dependencies]
 dev = ["ruff", "pytest", "pytest-cov", "mypy", "pre-commit"]
-fast = ["numba>=0.57.0"]
 
 [project.scripts]
 umierrorcorrect = "umierrorcorrect.cli:main_cli"
