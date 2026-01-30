@@ -77,12 +77,12 @@ The pipeline consists of the following sequential steps:
 
 ## 3. Running the Pipeline (Batch Mode)
 
-The `batch` command is the main entry point for running the full pipeline. It handles sample discovery, parallel execution, and logging.
+The `run` command is the main entry point for running the full pipeline. It handles sample discovery, parallel execution, and logging.
 
 ### Basic Syntax
 
 ```bash
-umierrorcorrect2 batch [INPUT_MODE] -r reference.fa -o output_dir/ [OPTIONS]
+umierrorcorrect2 run [INPUT_MODE] -r reference.fa -o output_dir/ [OPTIONS]
 ```
 
 ### Essential Arguments
@@ -106,7 +106,7 @@ You must specify exactly one of the following input modes:
 Process a specific pair of FASTQ files.
 
 ```bash
-umierrorcorrect2 batch \
+umierrorcorrect2 run \
     -r1 sample_R1.fastq.gz \
     -r2 sample_R2.fastq.gz \
     -r hg38.fa \
@@ -118,7 +118,7 @@ umierrorcorrect2 batch \
 Automatically discover all FASTQ pairs in a directory.
 
 ```bash
-umierrorcorrect2 batch \
+umierrorcorrect2 run \
     -i /path/to/fastq_directory/ \
     -r hg38.fa \
     -o results/
@@ -129,7 +129,7 @@ umierrorcorrect2 batch \
 Use a CSV/TSV file to define samples.
 
 ```bash
-umierrorcorrect2 batch \
+umierrorcorrect2 run \
     --sample-sheet samples.csv \
     -r hg38.fa \
     -o results/

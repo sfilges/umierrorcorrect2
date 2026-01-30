@@ -386,7 +386,7 @@ def fit_model(
 
 
 @app.command()
-def batch(
+def run(
     read1: Annotated[
         Optional[Path], typer.Option("-r1", "--read1", help="Path to first FASTQ file (R1) for single-sample mode.")
     ] = None,
@@ -458,20 +458,20 @@ def batch(
     Examples:
 
         # Single sample mode with single-end reads (r1) with fastp and qc enabled
-        umierrorcorrect2 batch -r1 sample_R1.fastq.gz -r genome.fa -o results/
+        umierrorcorrect2 run -r1 sample_R1.fastq.gz -r genome.fa -o results/
 
         # Single sample mode with paired-end reads, without fastp (cutadapt handles adapter trimming)
         # and without qc (equivalent to the original umierrorcorrect)
-        umierrorcorrect2 batch -r1 sample_R1.fastq.gz -r2 sample_R2.fastq.gz -r genome.fa -o results/ --no-fastp --no-qc
+        umierrorcorrect2 run -r1 sample_R1.fastq.gz -r2 sample_R2.fastq.gz -r genome.fa -o results/ --no-fastp --no-qc
 
         # Batch process all FASTQ files in a directory
-        umierrorcorrect2 batch -i /path/to/fastqs -r genome.fa -o results/
+        umierrorcorrect2 run -i /path/to/fastqs -r genome.fa -o results/
 
         # Batch process with sample sheet
-        umierrorcorrect2 batch --sample-sheet samples.csv -r genome.fa -o results/
+        umierrorcorrect2 run --sample-sheet samples.csv -r genome.fa -o results/
 
         # With pre-filtering (fastp is enabled by default) but without qc and non-standard UMI configuration
-        umierrorcorrect2 batch -i /path/to/fastqs -r genome.fa -o results/ --no-qc -ul 12 -sl 8
+        umierrorcorrect2 run -i /path/to/fastqs -r genome.fa -o results/ --no-qc -ul 12 -sl 8
     """
     from umierrorcorrect2.batch import batch_process, discover_samples, parse_sample_sheet
     from umierrorcorrect2.models.models import Sample

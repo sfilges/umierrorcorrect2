@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **CLI Renamed**: The command-line tool has been renamed from `umierrorcorrect` to `umierrorcorrect2` to avoid conflicts with legacy installations.
 - **Type Safety**: Re-enabled and fixed strict `mypy` type checking for core modules: `core.consensus`, `core.group`, and `core.umi_cluster`.
+- **Renamed batch to run**: The `batch` command has been renamed to `run` to better reflect its purpose.
 
 ### Fixed
 

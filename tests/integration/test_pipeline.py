@@ -29,7 +29,7 @@ def test_pipeline_end_to_end(temp_output_dir, test_data_dir):
 
     cmd = [
         "umierrorcorrect2",
-        "batch",
+        "run",
         "-r1",
         str(r1),
         "-r2",
