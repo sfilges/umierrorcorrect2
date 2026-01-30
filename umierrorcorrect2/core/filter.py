@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pysam
 
-from umierrorcorrect.core.constants import DEFAULT_FAMILY_SIZES_STR
+from umierrorcorrect2.core.constants import DEFAULT_FAMILY_SIZES_STR
 
 
 def filter_cons(filename, raw_depth_cutoff=150, fsizes=DEFAULT_FAMILY_SIZES_STR, writeraw=False):

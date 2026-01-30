@@ -10,7 +10,7 @@ import pytest
 @pytest.fixture
 def test_data_dir():
     """Return path to the main test_data directory."""
-    return Path(__file__).parent.parent / "test_data"
+    return Path(__file__).parent / "test_data"
 
 
 @pytest.fixture

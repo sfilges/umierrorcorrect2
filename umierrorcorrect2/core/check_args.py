@@ -4,7 +4,7 @@ import shutil
 from argparse import Namespace
 from pathlib import Path
 
-from umierrorcorrect.core.utils import check_output_directory, get_sample_name
+from umierrorcorrect2.core.utils import check_output_directory, get_sample_name
 
 
 def is_tool(name: str) -> bool:

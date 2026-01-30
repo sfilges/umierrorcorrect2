@@ -8,13 +8,13 @@ import typer
 from rich.console import Console
 from rich.text import Text
 
-from umierrorcorrect.core.constants import ASCII_ART, DEFAULT_FAMILY_SIZES_STR
-from umierrorcorrect.core.logging_config import add_file_handler, get_log_path, get_logger, setup_logging
-from umierrorcorrect.version import __version__
+from umierrorcorrect2.core.constants import ASCII_ART, DEFAULT_FAMILY_SIZES_STR
+from umierrorcorrect2.core.logging_config import add_file_handler, get_log_path, get_logger, setup_logging
+from umierrorcorrect2.version import __version__
 
 # Create main app and subcommand apps
 app = typer.Typer(
-    name="umierrorcorrect",
+    name="umierrorcorrect2",
     help="Pipeline for analyzing barcoded amplicon sequencing data with Unique Molecular Identifiers (UMI).",
     no_args_is_help=True,
     rich_markup_mode="rich",
@@ -76,8 +76,8 @@ def preprocess(
     ] = True,
 ) -> None:
     """Preprocess FASTQ files by extracting UMIs and adding them to read headers."""
-    from umierrorcorrect.models.models import FastpConfig, PreprocessConfig
-    from umierrorcorrect.preprocess import run_preprocessing
+    from umierrorcorrect2.models.models import FastpConfig, PreprocessConfig
+    from umierrorcorrect2.preprocess import run_preprocessing
 
     # Set up file logging
     output.mkdir(parents=True, exist_ok=True)
@@ -144,8 +144,8 @@ def consensus(
     consensus_method: Annotated[str, typer.Option("-c", "--consensus-method", help="Consensus method.")] = "position",
 ) -> None:
     """Generate consensus sequences from UMI-tagged BAM files."""
-    from umierrorcorrect.models.models import UMIErrorCorrectConfig
-    from umierrorcorrect.umi_error_correct import run_umi_errorcorrect
+    from umierrorcorrect2.models.models import UMIErrorCorrectConfig
+    from umierrorcorrect2.umi_error_correct import run_umi_errorcorrect
 
     # Set up file logging
     output.mkdir(parents=True, exist_ok=True)
@@ -185,7 +185,7 @@ def stats(
     Statistics are derived directly from the consensus BAM file - no separate
     stats file is required.
     """
-    from umierrorcorrect.get_consensus_statistics import run_get_consensus_statistics
+    from umierrorcorrect2.get_consensus_statistics import run_get_consensus_statistics
 
     # Set up file logging
     output.mkdir(parents=True, exist_ok=True)
@@ -217,7 +217,7 @@ def variants(
     """Call variants from consensus sequences."""
     from argparse import Namespace
 
-    from umierrorcorrect.call_variants import run_call_variants
+    from umierrorcorrect2.call_variants import run_call_variants
 
     # Set up file logging
     output.mkdir(parents=True, exist_ok=True)
@@ -254,8 +254,8 @@ def mapping(
 ) -> None:
     """Run BWA mapping to reference genome."""
 
-    from umierrorcorrect.align import align_bwa
-    from umierrorcorrect.core.utils import check_output_directory, get_sample_name
+    from umierrorcorrect2.align import align_bwa
+    from umierrorcorrect2.core.utils import check_output_directory, get_sample_name
 
     output_path = check_output_directory(str(output))
 
@@ -286,7 +286,7 @@ def filter_bam(
     cutoff: Annotated[int, typer.Option("-c", "--cutoff", help="Consensus depth cutoff.")] = 3,
 ) -> None:
     """Filter BAM file by removing reads below consensus depth threshold."""
-    from umierrorcorrect.core.filter import filter_bam as run_filter_bam
+    from umierrorcorrect2.core.filter import filter_bam as run_filter_bam
 
     logger.info("Filtering BAM file")
     run_filter_bam(str(infile), str(outfile), cutoff)
@@ -303,7 +303,7 @@ def filter_cons(
     write_raw: Annotated[bool, typer.Option("--write-raw", help="Include raw reads in output.")] = False,
 ) -> None:
     """Filter consensus file by depth and family sizes."""
-    from umierrorcorrect.core.filter import filter_cons as run_filter_cons
+    from umierrorcorrect2.core.filter import filter_cons as run_filter_cons
 
     logger.info("Filtering consensus file")
     run_filter_cons(str(infile), depth, family_sizes, write_raw)
@@ -334,7 +334,7 @@ def downsampling(
     A plateau in the curve indicates sequencing saturation - additional sequencing
     would not discover significantly more UMI families.
     """
-    from umierrorcorrect.downsampling import run_downsampling
+    from umierrorcorrect2.downsampling import run_downsampling
 
     # Set up file logging
     output.mkdir(parents=True, exist_ok=True)
@@ -371,7 +371,7 @@ def fit_model(
     """Fit beta-binomial background model for variant calling."""
     from argparse import Namespace
 
-    from umierrorcorrect.core.fit_background_model import run_fit_bgmodel
+    from umierrorcorrect2.core.fit_background_model import run_fit_bgmodel
 
     args = Namespace(
         cons_file=str(cons_file),
@@ -458,23 +458,23 @@ def batch(
     Examples:
 
         # Single sample mode with single-end reads (r1) with fastp and qc enabled
-        umierrorcorrect batch -r1 sample_R1.fastq.gz -r genome.fa -o results/
+        umierrorcorrect2 batch -r1 sample_R1.fastq.gz -r genome.fa -o results/
 
         # Single sample mode with paired-end reads, without fastp (cutadapt handles adapter trimming)
         # and without qc (equivalent to the original umierrorcorrect)
-        umierrorcorrect batch -r1 sample_R1.fastq.gz -r2 sample_R2.fastq.gz -r genome.fa -o results/ --no-fastp --no-qc
+        umierrorcorrect2 batch -r1 sample_R1.fastq.gz -r2 sample_R2.fastq.gz -r genome.fa -o results/ --no-fastp --no-qc
 
         # Batch process all FASTQ files in a directory
-        umierrorcorrect batch -i /path/to/fastqs -r genome.fa -o results/
+        umierrorcorrect2 batch -i /path/to/fastqs -r genome.fa -o results/
 
         # Batch process with sample sheet
-        umierrorcorrect batch --sample-sheet samples.csv -r genome.fa -o results/
+        umierrorcorrect2 batch --sample-sheet samples.csv -r genome.fa -o results/
 
         # With pre-filtering (fastp is enabled by default) but without qc and non-standard UMI configuration
-        umierrorcorrect batch -i /path/to/fastqs -r genome.fa -o results/ --no-qc -ul 12 -sl 8
+        umierrorcorrect2 batch -i /path/to/fastqs -r genome.fa -o results/ --no-qc -ul 12 -sl 8
     """
-    from umierrorcorrect.batch import batch_process, discover_samples, parse_sample_sheet
-    from umierrorcorrect.models.models import Sample
+    from umierrorcorrect2.batch import batch_process, discover_samples, parse_sample_sheet
+    from umierrorcorrect2.models.models import Sample
 
     # Validate input options - exactly one input mode must be provided
     input_modes = sum([read1 is not None, input_dir is not None, sample_sheet is not None])

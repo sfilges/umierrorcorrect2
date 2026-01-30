@@ -51,10 +51,10 @@ pip install umierrorcorrect2
 
 ## Quick Start
 
-The command-line tool is named `umierrorcorrect`. Run the full pipeline on a single sample:
+The command-line tool is named `umierrorcorrect2`. Run the full pipeline on a single sample:
 
 ```bash
-umierrorcorrect batch \
+umierrorcorrect2 batch \
     -r1 sample_R1.fastq.gz \
     -r2 sample_R2.fastq.gz \
     -r hg38.fa \
@@ -64,7 +64,7 @@ umierrorcorrect batch \
 Run the pipeline on multiple samples in a folder (searches recursively for FASTQ files):
 
 ```bash
-umierrorcorrect batch \
+umierrorcorrect2 batch \
     -i folder_with_fastq_files/ \
     -r hg38.fa \
     -o results/
@@ -73,7 +73,7 @@ umierrorcorrect batch \
 For detailed instructions, see the **[User Guide](docs/USER_GUIDE.md)** or run:
 
 ```bash
-umierrorcorrect
+umierrorcorrect2
 ```
 
 ## Documentation

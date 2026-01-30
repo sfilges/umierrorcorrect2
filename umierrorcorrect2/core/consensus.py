@@ -15,8 +15,8 @@ from typing import TYPE_CHECKING, Any, Optional, Union
 
 import pysam
 
-from umierrorcorrect.core.check_args import is_tool
-from umierrorcorrect.core.constants import (
+from umierrorcorrect2.core.check_args import is_tool
+from umierrorcorrect2.core.constants import (
     COVERAGE_THRESHOLD_FOR_SIMPLE_CONSENSUS,
     DEFAULT_MAPPING_QUALITY,
     MAX_PHRED_SCORE,
@@ -25,7 +25,7 @@ from umierrorcorrect.core.constants import (
 )
 
 if TYPE_CHECKING:
-    from umierrorcorrect.core.umi_cluster import umi_cluster
+    from umierrorcorrect2.core.umi_cluster import umi_cluster
 
 # Pre-computed lookup tables for phred score conversions (avoid repeated 10**x calculations)
 # Phred scores typically range from 0-93 (ASCII 33-126)
@@ -126,7 +126,7 @@ class ConsensusRead:
             if tmppos == position1:
                 self.splits[-1] = position2
             else:
-                self.splits[-1] = (tmppos, position1)
+                self.splits[-1] = (tmppos, position1)  # type: ignore
                 self.splits.append(position2)
 
     def add_json_object(self, dictionary: dict[str, Any]) -> None:
@@ -508,8 +508,8 @@ def get_consensus_position_based(
 
     if add_consensus and consread:
         if output_json:
-            counts = Counter([x.query_sequence for x in group_seqs])
-            consread.add_json_object(dict(counts))
+            counts = Counter([x.query_sequence for x in group_seqs if x.query_sequence])
+            consread.add_json_object(dict(counts))  # type: ignore
         return consread
 
     return None

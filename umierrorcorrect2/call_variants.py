@@ -7,7 +7,7 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.stats import betabinom
 
-from umierrorcorrect.core.utils import get_sample_name_from_cons, parse_cons_file
+from umierrorcorrect2.core.utils import get_sample_name_from_cons, parse_cons_file
 
 # Default beta-binomial model parameters (alpha, beta)
 # These were fitted from background error data

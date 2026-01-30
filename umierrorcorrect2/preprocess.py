@@ -22,10 +22,10 @@ import tempfile
 from pathlib import Path
 from typing import Optional
 
-from umierrorcorrect.core.check_args import is_tool
-from umierrorcorrect.core.logging_config import get_logger, log_subprocess_stderr
-from umierrorcorrect.core.read_fastq_records import read_fastq, read_fastq_paired_end
-from umierrorcorrect.models.models import FastpConfig, FastpResult, PreprocessConfig
+from umierrorcorrect2.core.check_args import is_tool
+from umierrorcorrect2.core.logging_config import get_logger, log_subprocess_stderr
+from umierrorcorrect2.core.read_fastq_records import read_fastq, read_fastq_paired_end
+from umierrorcorrect2.models.models import FastpConfig, FastpResult, PreprocessConfig
 
 logger = get_logger(__name__)
 

@@ -1,12 +1,12 @@
 """Unit tests for umierrorcorrect.batch module."""
 
 import pytest
-from umierrorcorrect.batch import (
+from umierrorcorrect2.batch import (
     Sample,
     discover_samples,
     parse_sample_sheet,
 )
-from umierrorcorrect.core.check_args import is_tool
+from umierrorcorrect2.core.check_args import is_tool
 
 
 class TestSampleDataclass:

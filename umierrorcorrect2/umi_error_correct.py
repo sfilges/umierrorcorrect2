@@ -12,7 +12,7 @@ from typing import Any
 
 import pysam
 
-from umierrorcorrect.core.consensus import (
+from umierrorcorrect2.core.consensus import (
     get_all_consensus,
     get_all_consensus_most_common,
     get_all_consensus_msa,
@@ -20,13 +20,13 @@ from umierrorcorrect.core.consensus import (
     get_reference_sequence,
     write_singleton_reads,
 )
-from umierrorcorrect.core.constants import DEFAULT_FAMILY_SIZES
-from umierrorcorrect.core.get_cons_info import calc_major_nonref_allele_frequency, get_cons_info, write_consensus
-from umierrorcorrect.core.get_regions_from_bed import merge_regions, read_bed, sort_regions
-from umierrorcorrect.core.group import read_bam_from_bed, read_bam_from_tag, readBam
-from umierrorcorrect.core.logging_config import get_logger
-from umierrorcorrect.core.umi_cluster import cluster_barcodes, get_connected_components, merge_clusters
-from umierrorcorrect.models.models import UMIErrorCorrectConfig
+from umierrorcorrect2.core.constants import DEFAULT_FAMILY_SIZES
+from umierrorcorrect2.core.get_cons_info import calc_major_nonref_allele_frequency, get_cons_info, write_consensus
+from umierrorcorrect2.core.get_regions_from_bed import merge_regions, read_bed, sort_regions
+from umierrorcorrect2.core.group import read_bam_from_bed, read_bam_from_tag, readBam
+from umierrorcorrect2.core.logging_config import get_logger
+from umierrorcorrect2.core.umi_cluster import cluster_barcodes, get_connected_components, merge_clusters
+from umierrorcorrect2.models.models import UMIErrorCorrectConfig
 
 logger = get_logger(__name__)
 
@@ -627,7 +627,7 @@ def run_umi_errorcorrect(config: UMIErrorCorrectConfig) -> None:
         merge_duplicate_positions_all_chromosomes(duppos, cons_file, num_cpus)
 
     # Generate stats file from consensus BAM (single source of truth)
-    from umierrorcorrect.get_consensus_statistics import get_stat, write_stats_file
+    from umierrorcorrect2.get_consensus_statistics import get_stat, write_stats_file
 
     stats = get_stat(consensus_bam, bed_file)
     write_stats_file(stats, output_path, sample_name)

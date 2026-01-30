@@ -4,8 +4,8 @@ from collections.abc import Generator
 from dataclasses import dataclass
 from operator import ne
 
-from umierrorcorrect.core.constants import SUBSTRING_OPTIMIZATION_THRESHOLD
-from umierrorcorrect.core.logging_config import get_logger
+from umierrorcorrect2.core.constants import SUBSTRING_OPTIMIZATION_THRESHOLD
+from umierrorcorrect2.core.logging_config import get_logger
 
 logger = get_logger(__name__)
 
@@ -41,7 +41,7 @@ def _hamming_original(a, b):
     """
     Returns the Hamming distance between two strings of equal length
 
-    Original implementation from umierrorcorrect, now deprecated.
+    Original implementation from umierrorcorrect2, now deprecated.
     """
     try:
         assert len(a) == len(b)

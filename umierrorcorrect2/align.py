@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pysam
 
-from umierrorcorrect.core.logging_config import get_logger, log_subprocess_stderr
+from umierrorcorrect2.core.logging_config import get_logger, log_subprocess_stderr
 
 logger = get_logger(__name__)
 

@@ -1,7 +1,7 @@
 from collections import Counter
 
-from umierrorcorrect.core.constants import DEFAULT_FAMILY_SIZES, SINGLETON_FAMILY_SIZES
-from umierrorcorrect.core.get_regions_from_bed import get_all_annotations
+from umierrorcorrect2.core.constants import DEFAULT_FAMILY_SIZES, SINGLETON_FAMILY_SIZES
+from umierrorcorrect2.core.get_regions_from_bed import get_all_annotations
 
 
 def get_cons_info(consensus_seq, singletons, fsizes=DEFAULT_FAMILY_SIZES):

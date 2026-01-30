@@ -84,10 +84,10 @@ def get_log_path(output_dir: Path | str) -> Path:
         output_dir: Directory where log file will be created.
 
     Returns:
-        Path to the log file with format: simsen-cli_YYYYMMDD_HHMMSS.log
+        Path to the log file with format: umierrorcorrect2_YYYYMMDD_HHMMSS.log
     """
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    return Path(output_dir) / f"simsen-cli_{timestamp}.log"
+    return Path(output_dir) / f"umierrorcorrect2_{timestamp}.log"
 
 
 def add_file_handler(

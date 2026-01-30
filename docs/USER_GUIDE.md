@@ -37,13 +37,13 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 # Create a virtual environment and install
 uv venv
 source .venv/bin/activate
-uv pip install umierrorcorrect
+uv pip install umierrorcorrect2
 ```
 
 #### Option B: Standard pip
 
 ```bash
-pip install umierrorcorrect
+pip install umierrorcorrect2
 ```
 
 #### Option C: Docker
@@ -82,7 +82,7 @@ The `batch` command is the main entry point for running the full pipeline. It ha
 ### Basic Syntax
 
 ```bash
-umierrorcorrect batch [INPUT_MODE] -r reference.fa -o output_dir/ [OPTIONS]
+umierrorcorrect2 batch [INPUT_MODE] -r reference.fa -o output_dir/ [OPTIONS]
 ```
 
 ### Essential Arguments
@@ -106,7 +106,7 @@ You must specify exactly one of the following input modes:
 Process a specific pair of FASTQ files.
 
 ```bash
-umierrorcorrect batch \
+umierrorcorrect2 batch \
     -r1 sample_R1.fastq.gz \
     -r2 sample_R2.fastq.gz \
     -r hg38.fa \
@@ -118,7 +118,7 @@ umierrorcorrect batch \
 Automatically discover all FASTQ pairs in a directory.
 
 ```bash
-umierrorcorrect batch \
+umierrorcorrect2 batch \
     -i /path/to/fastq_directory/ \
     -r hg38.fa \
     -o results/
@@ -129,7 +129,7 @@ umierrorcorrect batch \
 Use a CSV/TSV file to define samples.
 
 ```bash
-umierrorcorrect batch \
+umierrorcorrect2 batch \
     --sample-sheet samples.csv \
     -r hg38.fa \
     -o results/
@@ -197,29 +197,29 @@ For advanced users, pipeline steps can be run individually.
 ### Preprocess
 
 ```bash
-umierrorcorrect preprocess -r1 input_R1.fq.gz -o output_dir/ -ul 12 -sl 16
+umierrorcorrect2 preprocess -r1 input_R1.fq.gz -o output_dir/ -ul 12 -sl 16
 ```
 
 ### Mapping
 
 ```bash
-umierrorcorrect mapping -r1 input_R1.fq.gz -r reference.fa -o output_dir/
+umierrorcorrect2 mapping -r1 input_R1.fq.gz -r reference.fa -o output_dir/
 ```
 
 ### Consensus
 
 ```bash
-umierrorcorrect consensus -b mapped.bam -o output_dir/
+umierrorcorrect2 consensus -b mapped.bam -o output_dir/
 ```
 
 ### Statistics
 
 ```bash
-umierrorcorrect stats -o output_dir/ --cons-bam consensus.bam
+umierrorcorrect2 stats -o output_dir/ --cons-bam consensus.bam
 ```
 
 ### Variant Calling
 
 ```bash
-umierrorcorrect variants -o output_dir/ -r reference.fa --cons sample.cons
+umierrorcorrect2 variants -o output_dir/ -r reference.fa --cons sample.cons
 ```

@@ -1,7 +1,7 @@
 """Unit tests for umierrorcorrect.core.umi_cluster module."""
 
 import pytest
-from umierrorcorrect.core.umi_cluster import (
+from umierrorcorrect2.core.umi_cluster import (
     _HAS_NUMBA,
     _hamming_native,
     cluster_barcodes,
@@ -15,7 +15,7 @@ from umierrorcorrect.core.umi_cluster import (
 
 # Import numba-specific functions if available
 if _HAS_NUMBA:
-    from umierrorcorrect.core.umi_cluster import _hamming_numba
+    from umierrorcorrect2.core.umi_cluster import _hamming_numba
 
 
 class TestHammingDistance:

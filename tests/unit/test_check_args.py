@@ -1,6 +1,6 @@
 """Unit tests for umierrorcorrect.core.check_args module."""
 
-from umierrorcorrect.core.check_args import (
+from umierrorcorrect2.core.check_args import (
     check_output_directory,
     get_sample_name,
     is_tool,

@@ -1,7 +1,7 @@
 """Unit tests for umierrorcorrect.get_consensus_statistics module."""
 
-from umierrorcorrect.core.constants import DEFAULT_FAMILY_SIZES
-from umierrorcorrect.get_consensus_statistics import (
+from umierrorcorrect2.core.constants import DEFAULT_FAMILY_SIZES
+from umierrorcorrect2.get_consensus_statistics import (
     RegionConsensusStats,
     RegionStats,
     calculate_target_coverage,

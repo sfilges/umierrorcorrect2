@@ -38,7 +38,7 @@ dependencies = [
 dev = ["ruff", "pytest", "pytest-cov", "mypy", "pre-commit"]
 
 [project.scripts]
-umierrorcorrect = "umierrorcorrect.cli:main_cli"
+umierrorcorrect2 = "umierrorcorrect2.cli:main_cli"
 
 [project.urls]
 Homepage = "https://github.com/sfilges/umierrorcorrect2"
@@ -46,19 +46,19 @@ Documentation = "https://github.com/sfilges/umierrorcorrect2/wiki"
 Repository = "https://github.com/sfilges/umierrorcorrect2"
 
 [tool.hatch.version]
-path = "umierrorcorrect/version.py"
+path = "umierrorcorrect2/version.py"
 
 [tool.hatch.build.targets.sdist]
-include = ["/umierrorcorrect", "/test_data", "/doc"]
+include = ["/umierrorcorrect2", "/test_data", "/doc"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["umierrorcorrect"]
+packages = ["umierrorcorrect2"]
 
 # Ruff configuration
 [tool.ruff]
 target-version = "py39"
 line-length = 120
-src = ["umierrorcorrect"]
+src = ["umierrorcorrect2"]
 
 [tool.ruff.lint]
 select = [
@@ -85,29 +85,29 @@ fixable = ["ALL"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101", "ARG", "S311"] # S311: random ok for test data
-"umierrorcorrect/cli.py" = ["ARG001"] # version arg used by typer callback
-"umierrorcorrect/core/consensus.py" = [
+"umierrorcorrect2/cli.py" = ["ARG001"] # version arg used by typer callback
+"umierrorcorrect2/core/consensus.py" = [
     "ARG001",
     "SIM108",
     "SIM201",
     "B007",
 ] # ref arg part of function signature; ternary would reduce readability
-"umierrorcorrect/core/get_cons_info.py" = [
+"umierrorcorrect2/core/get_cons_info.py" = [
     "ARG001",
     "SIM201",
     "SIM108",
     "PTH123",
 ] # indel_freq args part of API; debug code in __main__
-"umierrorcorrect/core/check_args.py" = [
+"umierrorcorrect2/core/check_args.py" = [
     "SIM102",
 ] # nested if is clearer for validation errors
-"umierrorcorrect/core/umi_cluster.py" = [
+"umierrorcorrect2/core/umi_cluster.py" = [
     "PTH123",
 ] # hardcoded debug paths in __main__ block
-"umierrorcorrect/umi_error_correct.py" = [
+"umierrorcorrect2/umi_error_correct.py" = [
     "SIM108",
 ] # ternary would reduce readability for complex expressions
-"umierrorcorrect/preprocess.py" = ["SIM108"] # ternary would reduce readability
+"umierrorcorrect2/preprocess.py" = ["SIM108"] # ternary would reduce readability
 
 [tool.ruff.format]
 quote-style = "double"
@@ -128,7 +128,7 @@ filterwarnings = ["ignore::DeprecationWarning:pysam.*"]
 
 # Coverage configuration
 [tool.coverage.run]
-source = ["umierrorcorrect"]
+source = ["umierrorcorrect2"]
 branch = true
 omit = ["*/test_*.py", "*/__init__.py"]
 
@@ -155,12 +155,12 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = [
-    "umierrorcorrect.core.consensus",
-    "umierrorcorrect.core.group",
-    "umierrorcorrect.core.umi_cluster",
-    "umierrorcorrect.umi_error_correct",
-    "umierrorcorrect.get_consensus_statistics",
-    "umierrorcorrect.cli",
-    "umierrorcorrect.core.logging_config",
+    "umierrorcorrect2.core.consensus",
+    "umierrorcorrect2.core.group",
+    "umierrorcorrect2.core.umi_cluster",
+    "umierrorcorrect2.umi_error_correct",
+    "umierrorcorrect2.get_consensus_statistics",
+    "umierrorcorrect2.cli",
+    "umierrorcorrect2.core.logging_config",
 ]
 ignore_errors = true

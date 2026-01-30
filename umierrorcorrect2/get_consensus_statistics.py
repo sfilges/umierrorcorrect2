@@ -12,9 +12,9 @@ from pathlib import Path
 
 import pysam
 
-from umierrorcorrect.core.constants import DEFAULT_FAMILY_SIZES, HISTOGRAM_SUFFIX
-from umierrorcorrect.core.get_regions_from_bed import read_bed
-from umierrorcorrect.core.logging_config import get_logger
+from umierrorcorrect2.core.constants import DEFAULT_FAMILY_SIZES, HISTOGRAM_SUFFIX
+from umierrorcorrect2.core.get_regions_from_bed import read_bed
+from umierrorcorrect2.core.logging_config import get_logger
 
 logger = get_logger(__name__)
 

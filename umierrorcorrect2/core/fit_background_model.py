@@ -5,7 +5,7 @@ import numpy as np
 from scipy.optimize import minimize
 from scipy.stats import beta
 
-from umierrorcorrect.core.utils import parse_cons_file
+from umierrorcorrect2.core.utils import parse_cons_file
 
 
 def beta_nll(params: tuple[float, float], data: np.ndarray) -> float:

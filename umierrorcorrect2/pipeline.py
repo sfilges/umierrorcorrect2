@@ -17,14 +17,14 @@ External Dependencies:
 
 from pathlib import Path
 
-from umierrorcorrect.align import align_bwa, check_bwa_index
-from umierrorcorrect.call_variants import run_call_variants
-from umierrorcorrect.core.check_args import check_args_fastq
-from umierrorcorrect.core.logging_config import get_logger
-from umierrorcorrect.core.utils import get_sample_name
-from umierrorcorrect.get_consensus_statistics import run_get_consensus_statistics
-from umierrorcorrect.preprocess import run_preprocessing
-from umierrorcorrect.umi_error_correct import run_umi_errorcorrect
+from umierrorcorrect2.align import align_bwa, check_bwa_index
+from umierrorcorrect2.call_variants import run_call_variants
+from umierrorcorrect2.core.check_args import check_args_fastq
+from umierrorcorrect2.core.logging_config import get_logger
+from umierrorcorrect2.core.utils import get_sample_name
+from umierrorcorrect2.get_consensus_statistics import run_get_consensus_statistics
+from umierrorcorrect2.preprocess import run_preprocessing
+from umierrorcorrect2.umi_error_correct import run_umi_errorcorrect
 
 logger = get_logger(__name__)
 
@@ -69,7 +69,7 @@ def run_pipeline(args):
     # -----------------------------------------
     # Run preprocessing
     # -----------------------------------------
-    from umierrorcorrect.models.models import PreprocessConfig
+    from umierrorcorrect2.models.models import PreprocessConfig
 
     # Get fastp config from args (may be None if not using batch mode or fastp disabled)
     fastp_config = getattr(args, "fastp_config", None)
@@ -105,7 +105,7 @@ def run_pipeline(args):
     # -----------------------------------------
     # Run UMI error correction
     # -----------------------------------------
-    from umierrorcorrect.models.models import UMIErrorCorrectConfig
+    from umierrorcorrect2.models.models import UMIErrorCorrectConfig
 
     umi_config = UMIErrorCorrectConfig(
         reference_file=Path(args.reference_file),

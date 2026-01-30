@@ -8,8 +8,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
-from umierrorcorrect.core.check_args import is_tool
-from umierrorcorrect.core.utils import check_output_directory, get_sample_name
+from umierrorcorrect2.core.check_args import is_tool
+from umierrorcorrect2.core.utils import check_output_directory, get_sample_name
 
 
 @dataclass

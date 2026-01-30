@@ -12,9 +12,9 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-from umierrorcorrect.core.constants import DEFAULT_FAMILY_SIZES
-from umierrorcorrect.core.logging_config import get_logger
-from umierrorcorrect.get_consensus_statistics import (
+from umierrorcorrect2.core.constants import DEFAULT_FAMILY_SIZES
+from umierrorcorrect2.core.logging_config import get_logger
+from umierrorcorrect2.get_consensus_statistics import (
     RegionConsensusStats,
     get_stat,
 )

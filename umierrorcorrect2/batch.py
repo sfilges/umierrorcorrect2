@@ -14,15 +14,15 @@ from typing import Optional
 from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn
 
-from umierrorcorrect.core.constants import HISTOGRAM_SUFFIX
-from umierrorcorrect.core.logging_config import (
+from umierrorcorrect2.core.constants import HISTOGRAM_SUFFIX
+from umierrorcorrect2.core.logging_config import (
     add_file_handler,
     get_log_path,
     get_logger,
     setup_logging,
 )
-from umierrorcorrect.models.models import FastpConfig, Sample
-from umierrorcorrect.qc import run_fastqc, run_multiqc
+from umierrorcorrect2.models.models import FastpConfig, Sample
+from umierrorcorrect2.qc import run_fastqc, run_multiqc
 
 logger = get_logger("batch")
 console = Console()
@@ -207,7 +207,7 @@ def process_sample(
     """
     from argparse import Namespace
 
-    from umierrorcorrect.pipeline import run_pipeline
+    from umierrorcorrect2.pipeline import run_pipeline
 
     sample_output_dir = output_dir / sample.name
     sample_output_dir.mkdir(parents=True, exist_ok=True)

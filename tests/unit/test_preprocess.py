@@ -1,19 +1,19 @@
 from unittest.mock import patch
 
 import pytest
-from umierrorcorrect.models.models import FastpConfig
-from umierrorcorrect.preprocess import run_fastp
+from umierrorcorrect2.models.models import FastpConfig
+from umierrorcorrect2.preprocess import run_fastp
 
 
 @pytest.fixture
 def mock_is_tool():
-    with patch("umierrorcorrect.preprocess.is_tool", return_value=True) as m:
+    with patch("umierrorcorrect2.preprocess.is_tool", return_value=True) as m:
         yield m
 
 
 @pytest.fixture
 def mock_subprocess():
-    with patch("umierrorcorrect.preprocess.subprocess.run") as m:
+    with patch("umierrorcorrect2.preprocess.subprocess.run") as m:
         m.return_value.returncode = 0
         m.return_value.stderr = "fastp output"
         yield m

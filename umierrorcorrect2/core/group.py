@@ -3,7 +3,7 @@ from collections import Counter
 
 import pysam
 
-from umierrorcorrect.core.get_regions_from_bed import expand_regions_from_bed, merge_regions, read_bed, sort_regions
+from umierrorcorrect2.core.get_regions_from_bed import expand_regions_from_bed, merge_regions, read_bed, sort_regions
 
 
 def get_chromosome_list_from_bam(f: pysam.AlignmentFile) -> list[str]:

@@ -7,7 +7,7 @@ FROM ubuntu:24.04
 ################## METADATA ######################
 LABEL base.image="ubuntu:24.04"
 LABEL version="0.31.0"
-LABEL software="umierrorcorrect"
+LABEL software="umierrorcorrect2"
 LABEL software.version="0.31.0"
 LABEL about.summary="Modernized UMI error correction pipeline for barcoded amplicon sequencing"
 LABEL about.home="https://github.com/sfilges/umierrorcorrect2"
@@ -60,5 +60,5 @@ RUN uv venv $VIRTUAL_ENV && \
 WORKDIR /data
 
 # Default command
-ENTRYPOINT ["umierrorcorrect"]
+ENTRYPOINT ["umierrorcorrect2"]
 CMD ["--help"]

@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.32.0] - 2026-01-30
+
+### Added
+
+- **Integration Testing**: Added end-to-end integration test `tests/integration/test_pipeline.py` covering the full pipeline execution (FASTQ -> BAM -> VCF).
+- **Test Data**: Included slimmed-down real datasets in `tests/test_data/` for rapid integration testing.
+
+### Changed
+
+- **CLI Renamed**: The command-line tool has been renamed from `umierrorcorrect` to `umierrorcorrect2` to avoid conflicts with legacy installations.
+- **Type Safety**: Re-enabled and fixed strict `mypy` type checking for core modules: `core.consensus`, `core.group`, and `core.umi_cluster`.
+
+### Fixed
+
+- **Testing Infrastructure**: Fixed the `test_data_dir` fixture path in `tests/conftest.py` to correctly locate test resources.
+
 ## [0.31.0] - 2026-01-31
 
 ### Changed

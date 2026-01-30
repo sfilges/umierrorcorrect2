@@ -1,7 +1,7 @@
 """Unit tests for umierrorcorrect.core.consensus module."""
 
 import pytest
-from umierrorcorrect.core.consensus import (
+from umierrorcorrect2.core.consensus import (
     ConsensusRead,
     _phred_to_error,
     _phred_to_prob,

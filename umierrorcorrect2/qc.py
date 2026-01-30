@@ -7,8 +7,8 @@ Provides wrappers for FastQC and MultiQC quality control tools.
 import subprocess
 from pathlib import Path
 
-from umierrorcorrect.core.check_args import is_tool
-from umierrorcorrect.core.logging_config import get_logger, log_subprocess_stderr
+from umierrorcorrect2.core.check_args import is_tool
+from umierrorcorrect2.core.logging_config import get_logger, log_subprocess_stderr
 
 logger = get_logger(__name__)
 

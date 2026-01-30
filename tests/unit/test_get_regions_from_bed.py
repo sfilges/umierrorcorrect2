@@ -1,7 +1,7 @@
 """Unit tests for umierrorcorrect.core.get_regions_from_bed module."""
 
 import pytest
-from umierrorcorrect.core.get_regions_from_bed import (
+from umierrorcorrect2.core.get_regions_from_bed import (
     get_all_annotations,
     get_first_annotation,
     get_overlap,
