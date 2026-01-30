@@ -12,8 +12,8 @@ class TestIsTool:
 
     def test_existing_tool(self):
         """Test that is_tool returns True for existing tools."""
-        # 'python' should exist on any system running this test
-        assert is_tool("python") is True
+        # 'ls' should exist on any Unix-like system running this test
+        assert is_tool("ls") is True
 
     def test_nonexistent_tool(self):
         """Test that is_tool returns False for non-existent tools."""
@@ -27,7 +27,7 @@ class TestIsTool:
         """
         # Run is_tool multiple times to check for resource leaks
         for _ in range(100):
-            is_tool("python")
+            is_tool("ls")
             is_tool("nonexistent_tool")
         # If we get here without error, no file handle leak occurred
 

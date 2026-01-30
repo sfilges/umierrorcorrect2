@@ -273,8 +273,8 @@ class TestIsTool:
 
     def test_existing_tool(self):
         """Test that is_tool returns True for existing tools."""
-        # 'python' should exist on any system running this test
-        assert is_tool("python") is True
+        # 'ls' should exist on any Unix-like system running this test
+        assert is_tool("ls") is True
 
     def test_nonexistent_tool(self):
         """Test that is_tool returns False for non-existent tools."""

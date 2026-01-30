@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.31.0] - 2026-01-31
+
+### Changed
+
+- **Made numba default** for calculating hamming distances; also included numba in the default dependencies.
+- **Removed Python 3.14** from supported versions.
+- **Added pre-commit hooks** for code quality checks.
+- Updated README.md.
+
 ## [0.30.4] - 2026-01-27
 
 ### Changed
