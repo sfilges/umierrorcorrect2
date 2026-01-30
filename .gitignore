@@ -16,7 +16,6 @@ results*/
 .vscode/
 .claude/
 CLAUDE.md
-test_data/
 notebooks/
 
 # Distribution / packaging
@@ -224,7 +223,3 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
-
-# Streamlit
-.streamlit/secrets.toml*.fastq.gz
-*.fastq.gz
