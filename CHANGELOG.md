@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.32.1] - 2026-01-31
+
+### Changed
+
+- **Type Hints**: Added type hints to `umierrorcorrect2/core/filter.py` for better static analysis.
+- **Docstrings**: Added docstrings to `umierrorcorrect2/core/filter.py` functions.
+
 ## [0.32.0] - 2026-01-30
 
 ### Added
@@ -15,14 +22,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **CLI Renamed**: The command-line tool has been renamed from `umierrorcorrect` to `umierrorcorrect2` to avoid conflicts with legacy installations.
-- **Type Safety**: Re-enabled and fixed strict `mypy` type checking for core modules: `core.consensus`, `core.group`, and `core.umi_cluster`.
 - **Renamed batch to run**: The `batch` command has been renamed to `run` to better reflect its purpose.
 
 ### Fixed
 
 - **Testing Infrastructure**: Fixed the `test_data_dir` fixture path in `tests/conftest.py` to correctly locate test resources.
 
-## [0.31.0] - 2026-01-31
+## [0.31.0] - 2026-01-30
 
 ### Changed
 
@@ -121,6 +127,8 @@ Initial release of umierrorcorrect2 (a fork of umierrorcorrect v0.29).
 - Fixed path handling issues using `pathlib`.
 
 ---
+[0.32.0]: https://github.com/sfilges/umierrorcorrect2/releases/tag/v0.32.0
+[0.31.0]: https://github.com/sfilges/umierrorcorrect2/releases/tag/v0.31.0
 [0.30.4]: https://github.com/sfilges/umierrorcorrect2/releases/tag/v0.30.4
 [0.30.3]: https://github.com/sfilges/umierrorcorrect2/releases/tag/v0.30.3
 [0.30.2]: https://github.com/sfilges/umierrorcorrect2/releases/tag/v0.30.2

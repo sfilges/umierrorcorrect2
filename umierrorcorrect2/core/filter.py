@@ -6,7 +6,17 @@ import pysam
 from umierrorcorrect2.core.constants import DEFAULT_FAMILY_SIZES_STR
 
 
-def filter_cons(filename, raw_depth_cutoff=150, fsizes=DEFAULT_FAMILY_SIZES_STR, writeraw=False):
+def filter_cons(
+    filename: str, raw_depth_cutoff: int = 150, fsizes: str = DEFAULT_FAMILY_SIZES_STR, writeraw: bool = False
+) -> None:
+    """Filter consensus file by depth and family sizes.
+
+    Args:
+        filename: Path to input consensus file (tsv).
+        raw_depth_cutoff: Minimum raw depth to keep a consensus group.
+        fsizes: Comma-separated string of family sizes to keep.
+        writeraw: Whether to write raw reads to the output file.
+    """
     outfilename = filename.replace("_cons.tsv", "_filtered_cons.tsv")
     fs = fsizes.split(",")
     with Path(filename).open() as f, Path(outfilename).open("w") as g:
@@ -29,11 +39,19 @@ def filter_cons(filename, raw_depth_cutoff=150, fsizes=DEFAULT_FAMILY_SIZES_STR,
                     g.write(line)
 
 
-def filter_bam(infilename, outfilename, consensus_cutoff):
+def filter_bam(infilename: str, outfilename: str, consensus_cutoff: int) -> None:
+    """Filter BAM file by removing reads below consensus depth threshold.
+
+    Args:
+        infilename: Path to input BAM file.
+        outfilename: Path to output BAM file.
+        consensus_cutoff: Minimum consensus family size to keep.
+    """
     consensus_cutoff = int(consensus_cutoff)
     with pysam.AlignmentFile(infilename, "rb") as f, pysam.AlignmentFile(outfilename, "wb", template=f) as g:
         reads = f.fetch()
         for read in reads:
-            size = int(read.qname.rsplit("=", 1)[-1])
+            size = int(read.qname.rsplit("=", 1)[-1])  # type: ignore
+
             if size >= consensus_cutoff:
                 g.write(read)
