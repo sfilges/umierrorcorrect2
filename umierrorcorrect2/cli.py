@@ -402,8 +402,8 @@ def run(
         Optional[Path],
         typer.Option("--sample-sheet", help="CSV/TSV sample sheet with sample_name,read1,read2 columns."),
     ] = None,
-    reference: Annotated[Path, typer.Option("-r", "--reference", help="Path to reference genome FASTA.")] = ...,
-    output_dir: Annotated[Path, typer.Option("-o", "--output-dir", help="Output directory for all samples.")] = ...,
+    reference: Annotated[Path, typer.Option("-r", "--reference", help="Path to reference genome FASTA.")] = ...,  # type: ignore[assignment]
+    output_dir: Annotated[Path, typer.Option("-o", "--output-dir", help="Output directory for all samples.")] = ...,  # type: ignore[assignment]
     bed_file: Annotated[
         Optional[Path], typer.Option("-rb", "--regions-bed", help="Path to BED file defining targeted regions.")
     ] = None,

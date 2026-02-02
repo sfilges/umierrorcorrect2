@@ -24,10 +24,10 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-    "pysam>=0.23.0",
-    "scipy",
-    "matplotlib",
-    "loguru>=0.7.0",
+    "pysam>=0.23.3",
+    "scipy>=1.16.3",
+    "matplotlib>=3.10.8",
+    "loguru>=0.7.3",
     "typer>=0.21.1",
     "pydantic>=2.12.0",
     "cutadapt>=5.2",
@@ -35,7 +35,13 @@ dependencies = [
     "numba>=0.57.0",
 ]
 [project.optional-dependencies]
-dev = ["ruff", "pytest", "pytest-cov", "mypy", "pre-commit"]
+dev = [
+    "ruff>=0.14.13",
+    "pytest>=9.0.2",
+    "pytest-cov>=7.0.0",
+    "mypy>=1.19.1",
+    "pre-commit>=4.5.1",
+]
 
 [project.scripts]
 umierrorcorrect2 = "umierrorcorrect2.cli:main_cli"
@@ -160,7 +166,6 @@ module = [
     "umierrorcorrect2.core.umi_cluster",
     "umierrorcorrect2.umi_error_correct",
     "umierrorcorrect2.get_consensus_statistics",
-    "umierrorcorrect2.cli",
     "umierrorcorrect2.core.logging_config",
 ]
 ignore_errors = true
