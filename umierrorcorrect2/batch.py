@@ -12,7 +12,9 @@ from pathlib import Path
 from typing import Optional
 
 from rich.console import Console
+from rich.panel import Panel
 from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn
+from rich.table import Table
 
 from umierrorcorrect2.core.constants import HISTOGRAM_SUFFIX
 from umierrorcorrect2.core.logging_config import (
@@ -295,7 +297,7 @@ def _process_sample_wrapper(args: tuple) -> ProcessingResult:
 
     # Configure logging in subprocess:
     # - Console at INFO to avoid DEBUG spam on terminal
-    # - File at DEBUG to capture external tool stderr
+    # - File at DEBUG to capture all details including external tool stderr
     setup_logging(level="INFO")
     sample_output_dir = output_dir / sample.name
     sample_output_dir.mkdir(parents=True, exist_ok=True)
@@ -405,7 +407,8 @@ def batch_process(
             if sample.read2:
                 all_fastq_files.append(sample.read2)
 
-        run_fastqc(all_fastq_files, fastqc_dir, threads=threads)
+        with console.status(f"[cyan]Running FastQC on {len(all_fastq_files)} files..."):
+            run_fastqc(all_fastq_files, fastqc_dir, threads=threads)
 
     # Process samples in parallel
     results: list[ProcessingResult] = []
@@ -472,7 +475,8 @@ def batch_process(
     # Run MultiQC if QC was requested
     if run_qc:
         qc_dir = output_dir / "qc_reports"
-        run_multiqc(output_dir, qc_dir)
+        with console.status("[cyan]Running MultiQC..."):
+            run_multiqc(output_dir, qc_dir)
 
     # Generate summary report
     write_batch_summary(results, output_dir)
@@ -511,7 +515,37 @@ def write_batch_summary(results: list[ProcessingResult], output_dir: Path) -> No
     failed = len(results) - successful
 
     console.print()
-    console.print("[bold]Batch Processing Summary:[/bold]")
-    console.print(f"  [green]Successful:[/green] {successful}")
-    console.print(f"  [red]Failed:[/red] {failed}")
-    console.print(f"  [blue]Summary file:[/blue] {summary_file}")
+
+    # Create results table
+    table = Table(title="Processing Results", show_lines=False)
+    table.add_column("Sample", style="cyan")
+    table.add_column("Status", justify="center")
+    table.add_column("Output Files", style="dim")
+
+    for result in sorted(results, key=lambda r: r.sample_name):
+        if result.success:
+            status = "[green]✓ Success[/green]"
+            files = []
+            if result.consensus_bam:
+                files.append("BAM")
+            if result.vcf_file:
+                files.append("VCF")
+            if result.hist_file:
+                files.append("Stats")
+            output_files = ", ".join(files) if files else "-"
+        else:
+            status = "[red]✗ Failed[/red]"
+            output_files = f"[red]{result.error_message or 'Unknown error'}[/red]"
+
+        table.add_row(result.sample_name, status, output_files)
+
+    console.print(table)
+    console.print()
+
+    # Print totals panel
+    totals = f"[green]Successful:[/green] {successful}  [red]Failed:[/red] {failed}"
+    console.print(Panel(
+        f"{totals}\n[dim]Summary file:[/dim] {summary_file}",
+        title="[bold]Summary[/bold]",
+        border_style="green" if failed == 0 else "yellow"
+    ))

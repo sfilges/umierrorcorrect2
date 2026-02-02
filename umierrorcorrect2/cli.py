@@ -6,6 +6,8 @@ from typing import Annotated, Optional
 
 import typer
 from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
 from rich.text import Text
 
 from umierrorcorrect2.core.constants import ASCII_ART, DEFAULT_FAMILY_SIZES_STR
@@ -522,7 +524,9 @@ def run(
             console.print(f"[red]Error:[/red] Sample sheet not found: {sample_sheet}")
             raise typer.Exit(1)
         try:
-            samples = parse_sample_sheet(sample_sheet)
+            with console.status("[cyan]Parsing sample sheet..."):
+                samples = parse_sample_sheet(sample_sheet)
+            console.print(f"[green]✓[/green] Loaded {len(samples)} sample(s)")
         except ValueError as e:
             console.print(f"[red]Error parsing sample sheet:[/red] {e}")
             raise typer.Exit(1) from None
@@ -531,7 +535,9 @@ def run(
         if input_dir is None or not input_dir.exists():
             console.print(f"[red]Error:[/red] Input directory not found: {input_dir}")
             raise typer.Exit(1)
-        samples = discover_samples(input_dir)
+        with console.status("[cyan]Discovering samples..."):
+            samples = discover_samples(input_dir)
+        console.print(f"[green]✓[/green] Found {len(samples)} sample(s)")
 
     if not samples:
         console.print("[red]Error:[/red] No samples found.")
@@ -557,39 +563,53 @@ def run(
     else:
         mode_str = "Sample Sheet"
 
-    # Print summary
+    # Print banner and configuration
     console.print(Text(ASCII_ART, style="bold green"))
-    console.print(f"  Version: {__version__}")
-    console.print("\n")
-    console.print(f"  Mode: {mode_str}")
-    console.print(f"  Samples: {len(samples)}")
+    console.print(f"[dim]Version {__version__}[/dim]", justify="center")
+    console.print()
+
+    # Build configuration table
+    config_table = Table(show_header=False, box=None, padding=(0, 2))
+    config_table.add_column("Key", style="dim")
+    config_table.add_column("Value")
+
+    config_table.add_row("Mode", mode_str)
+    config_table.add_row("Samples", str(len(samples)))
 
     if mode_str == "Single Sample":
-        console.print(f"  Read1: {read1}")
-        console.print(f"  Read2: {read2}")
+        config_table.add_row("Read1", str(read1))
+        if read2:
+            config_table.add_row("Read2", str(read2))
     elif mode_str == "Directory":
-        console.print(f"  Input directory: {input_dir}")
+        config_table.add_row("Input", str(input_dir))
     else:
-        console.print(f"  Sample sheet: {sample_sheet}")
+        config_table.add_row("Sample sheet", str(sample_sheet))
 
-    console.print(f"  Reference: {reference}")
-    console.print(f"  Output: {output_dir}")
+    config_table.add_row("Reference", str(reference))
+    config_table.add_row("Output", str(output_dir))
+
     if len(samples) > 1:
-        console.print(f"  Threads: {threads} ({samples_parallel} samples in parallel)")
+        config_table.add_row("Threads", f"{threads} ({samples_parallel} parallel)")
     else:
-        console.print(f"  Threads: {threads}")
+        config_table.add_row("Threads", str(threads))
+
+    # Build features list
+    features = []
     if fastp:
-        console.print("  Preprocessing: fastp")
+        features.append("fastp")
     if fastp_merge_reads and fastp:
-        console.print("  Merge reads: enabled")
-    if adapter_trimming and fastp:
-        console.print("  Adapter trimming: fastp")
-    if adapter_trimming and not fastp:
-        console.print("  Adapter trimming: cutadapt")
+        features.append("merge reads")
+    if adapter_trimming:
+        features.append(f"trim adapters ({'fastp' if fastp else 'cutadapt'})")
     if qc:
-        console.print("  QC reports: enabled")
-    console.print(f"  UMI length: {umi_length}")
-    console.print(f"  Spacer length: {spacer_length}")
+        features.append("QC reports")
+    if features:
+        config_table.add_row("Features", ", ".join(features))
+
+    config_table.add_row("UMI length", str(umi_length))
+    config_table.add_row("Spacer length", str(spacer_length))
+
+    console.print(Panel(config_table, title="[bold]Configuration[/bold]", border_style="blue"))
     console.print()
 
     logger.info(f"Starting processing of {len(samples)} sample(s)")

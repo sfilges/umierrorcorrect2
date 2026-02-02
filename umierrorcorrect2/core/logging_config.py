@@ -9,6 +9,10 @@ from typing import Literal
 from loguru import logger
 from rich.logging import RichHandler
 
+# Remove loguru's default handler immediately at import time
+# This ensures no DEBUG messages leak to stderr before setup_logging() is called
+logger.remove()
+
 # Track file handler ID so we can avoid duplicates
 _file_handler_id: int | None = None
 
@@ -19,6 +23,22 @@ LOG_FORMAT = (
     "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - "
     "<level>{message}</level>"
 )
+
+
+def _make_console_filter(level: str):
+    """Create a filter function for console logging.
+
+    At INFO level, only show WARNING+ on console (Rich UI handles user feedback).
+    At DEBUG level, show everything for debugging.
+    """
+    if level == "DEBUG":
+        return None
+
+    def filter_func(record):
+        # Only WARNING+ on console - INFO/DEBUG go to log file only
+        return record["level"].no >= logger.level("WARNING").no
+
+    return filter_func
 
 
 def setup_logging(
@@ -35,19 +55,15 @@ def setup_logging(
         rotation: When to rotate log file (e.g., "10 MB", "1 day").
         retention: How long to keep old log files.
     """
-    # Remove default handler
+    # Remove ALL handlers first (including default handler ID 0)
     logger.remove()
 
-    # Define console filter to reduce noise if level is INFO
-    # Only show INFO logs from the CLI module, but WARNING+ from everything else
-    console_filter = {"cli": "INFO", "": "WARNING"} if level == "INFO" else None
-
-    # Console handler using RichHandler for better formatting and progress bar integration
+    # Add console handler with filtering
     logger.add(
         RichHandler(markup=True, show_time=False, show_level=True, show_path=False),
         format="{message}",
         level=level,
-        filter=console_filter,
+        filter=_make_console_filter(level),
     )
 
     # File handler if specified
