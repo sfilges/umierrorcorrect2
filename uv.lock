@@ -2684,18 +2684,18 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "cutadapt", specifier = ">=5.2" },
-    { name = "loguru", specifier = ">=0.7.0" },
-    { name = "matplotlib" },
+    { name = "loguru", specifier = ">=0.7.3" },
+    { name = "matplotlib", specifier = ">=3.10.8" },
     { name = "multiqc", specifier = ">=1.33" },
-    { name = "mypy", marker = "extra == 'dev'" },
+    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.19.1" },
     { name = "numba", specifier = ">=0.57.0" },
-    { name = "pre-commit", marker = "extra == 'dev'" },
+    { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=4.5.1" },
     { name = "pydantic", specifier = ">=2.12.0" },
-    { name = "pysam", specifier = ">=0.23.0" },
-    { name = "pytest", marker = "extra == 'dev'" },
-    { name = "pytest-cov", marker = "extra == 'dev'" },
-    { name = "ruff", marker = "extra == 'dev'" },
-    { name = "scipy" },
+    { name = "pysam", specifier = ">=0.23.3" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=9.0.2" },
+    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=7.0.0" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.14.13" },
+    { name = "scipy", specifier = ">=1.15.0" },
     { name = "typer", specifier = ">=0.21.1" },
 ]
 provides-extras = ["dev"]
