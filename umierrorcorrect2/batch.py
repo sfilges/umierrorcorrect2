@@ -544,8 +544,10 @@ def write_batch_summary(results: list[ProcessingResult], output_dir: Path) -> No
 
     # Print totals panel
     totals = f"[green]Successful:[/green] {successful}  [red]Failed:[/red] {failed}"
-    console.print(Panel(
-        f"{totals}\n[dim]Summary file:[/dim] {summary_file}",
-        title="[bold]Summary[/bold]",
-        border_style="green" if failed == 0 else "yellow"
-    ))
+    console.print(
+        Panel(
+            f"{totals}\n[dim]Summary file:[/dim] {summary_file}",
+            title="[bold]Summary[/bold]",
+            border_style="green" if failed == 0 else "yellow",
+        )
+    )

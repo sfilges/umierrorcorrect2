@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Batch Processing**: Improved batch processing to show progress and status updates for each sample.
 - **Mutation BED Template**: Added mutation BED template file for ctDNA tracking to reflect the test data.
+- **VCF Output**: VCF output now contains all variants even if not bed file is provided to provide name annotations.
 
 ## [0.32.0] - 2026-01-30
 

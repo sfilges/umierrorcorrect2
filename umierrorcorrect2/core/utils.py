@@ -134,23 +134,21 @@ def parse_cons_file(filename: str, fsize: int = 3, include_position: bool = Fals
         for line in f:
             line = line.rstrip("\n")
             parts = line.split("\t")
-            name = parts[3]
 
-            if name not in "":
-                famsize = parts[-4]
-                if int(famsize) == fsize:
-                    frac = float(parts[-2])
-                    alt = parts[-1]
-                    count = parts[-3]
-                    if frac > 0 and alt not in "N":
-                        cov = int(parts[-5])
-                        f1.append(float(frac))
-                        n1.append(int(cov))
-                        c1.append(int(count))
-                        if include_position:
-                            pos = parts[1] + ":" + parts[2]
-                            posx.append(pos)
-                        data.append(line)
+            famsize = parts[-4]
+            if int(famsize) == fsize:
+                frac = float(parts[-2])
+                alt = parts[-1]
+                count = parts[-3]
+                if frac > 0 and alt not in "N":
+                    cov = int(parts[-5])
+                    f1.append(float(frac))
+                    n1.append(int(cov))
+                    c1.append(int(count))
+                    if include_position:
+                        pos = parts[1] + ":" + parts[2]
+                        posx.append(pos)
+                    data.append(line)
 
     if include_position:
         return (f1, n1, c1, posx, data)
