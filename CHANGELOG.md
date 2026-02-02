@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Batch Processing**: Improved batch processing to show progress and status updates for each sample.
+- **Mutation BED Template**: Added mutation BED template file for ctDNA tracking to reflect the test data.
 
 ## [0.32.0] - 2026-01-30
 
@@ -131,6 +132,9 @@ Initial release of umierrorcorrect2 (a fork of umierrorcorrect v0.29).
 - Fixed path handling issues using `pathlib`.
 
 ---
+[0.32.1]: https://github.com/sfilges/umierrorcorrect2/releases/tag/v0.32.1
+[0.32.0]: https://github.com/sfilges/umierrorcorrect2/releases/tag/v0.32.0
+[0.31.0]: https://github.com/sfilges/umierrorcorrect2/releases/tag/v0.31.0
 [0.30.4]: https://github.com/sfilges/umierrorcorrect2/releases/tag/v0.30.4
 [0.30.3]: https://github.com/sfilges/umierrorcorrect2/releases/tag/v0.30.3
 [0.30.2]: https://github.com/sfilges/umierrorcorrect2/releases/tag/v0.30.2
