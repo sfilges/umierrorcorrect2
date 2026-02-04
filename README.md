@@ -40,6 +40,10 @@ The `--no-qc` flag disables quality control steps. If QC is enabled (default) bu
 Use [uv](https://github.com/astral-sh/uv) for lightning-fast installation:
 
 ```bash
+# Installs globally
+uv tool install umierrorcorrect2
+
+# Install in your venv
 uv pip install umierrorcorrect2
 ```
 
