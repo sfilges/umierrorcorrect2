@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.32.2] - 2026-02-21
+
+### Fixed
+
+- **Unmapped reads crash**: Fixed a `TypeError` ("argument of type 'NoneType' is not a container or iterable") that occurred during consensus generation when unmapped mate-pair reads were fetched from the BAM file. Unmapped reads stored at their mapped mate's coordinates are now skipped in `get_cons_dict` (root cause) and `get_cons_info` guards against a `None` cigar string defensively. This crash was reproducible when running without fastp pre-filtering.
+
 ## [0.32.1] - 2026-02-02
 
 ### Added

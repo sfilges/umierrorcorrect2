@@ -21,8 +21,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 V1_WRAPPER="$SCRIPT_DIR/umi_pipeline_parallel.sh"
 
 # Reference and test data
-REF="/Users/ctosimsen/Documents/data/genomes/hg38/hg38.fa"
-TEST_DIR="/Users/ctosimsen/Documents/GitHub/test_data"
+REF="/home/stefan/Documents/genomes/UCSC/hg38/hg38.fa"
+TEST_DIR="/home/stefan/Documents/data/pik3ca_sensid_LOD_data/bench"
 
 # Test samples (using the smaller WT sample for faster benchmarks)
 SAMPLE1_R1="$TEST_DIR/LOD-PiK3CA-100-ng-WT-6_R1_001.fastq.gz"
@@ -39,11 +39,19 @@ UMI_LENGTH=19
 SPACER_LENGTH=16
 
 # Defaults
-THREADS=4
+THREADS=12
 RUNS=3
 OUT_DIR="$SCRIPT_DIR/results"
 SKIP_FULL=false
 PRESERVE=true  # Preserve final results for mutation analysis
+
+# Scaling benchmark configuration
+THREAD_COUNTS=(2 4 6 8 12 16)  # Threads per sample to test (single-sample, 1 job)
+JOB_COUNTS=(1 2 3)             # Parallel job counts to test
+THREADS_PER_JOB=4              # Fixed threads/job for the parallel jobs benchmark
+
+# Directory with 3+ real sample pairs for the parallel jobs benchmark
+PARALLEL_SAMPLE_DIR="$TEST_DIR"
 
 #######################################
 # Parse arguments
@@ -55,12 +63,18 @@ display_help() {
     echo "Benchmark UMIErrorCorrect v1 vs v2"
     echo ""
     echo "Options:"
-    echo "  -t THREADS   Number of threads (default: $THREADS)"
+    echo "  -t THREADS   Number of threads for single-run benchmarks (default: $THREADS)"
     echo "  -r RUNS      Number of benchmark runs (default: $RUNS)"
     echo "  -o OUTDIR    Output directory (default: $OUT_DIR)"
     echo "  -s           Skip full pipeline benchmarks (only run UMI-only)"
     echo "  -p           Don't preserve results (default: preserve with timestamp)"
     echo "  -h           Show this help"
+    echo ""
+    echo "Scaling benchmarks (edit script to configure):"
+    echo "  THREAD_COUNTS     Threads per sample for thread scaling (default: ${THREAD_COUNTS[*]})"
+    echo "  JOB_COUNTS        Parallel job counts for job scaling (default: ${JOB_COUNTS[*]})"
+    echo "  THREADS_PER_JOB   Fixed threads/job for job scaling (default: $THREADS_PER_JOB)"
+    echo "  PARALLEL_SAMPLE_DIR  Directory with 3+ sample pairs for job scaling (default: TEST_DIR)"
     echo ""
     exit 0
 }
@@ -98,6 +112,8 @@ check_dependencies() {
     local missing=()
 
     command -v hyperfine &>/dev/null || missing+=("hyperfine")
+    command -v fastp &>/dev/null || missing+=("fastp")
+    command -v parallel &>/dev/null || missing+=("parallel (GNU parallel)")
     command -v bwa &>/dev/null || missing+=("bwa")
     command -v samtools &>/dev/null || missing+=("samtools")
     command -v run_umierrorcorrect.py &>/dev/null || missing+=("umierrorcorrect v1")
@@ -161,6 +177,7 @@ benchmark_full_with_fastp() {
             -r '$REF' \
             -u $UMI_LENGTH \
             -s $SPACER_LENGTH \
+            -j 1 \
             -t $THREADS \
             --merge 2>/dev/null" \
         --command-name "v2-with-fastp-qc" \
@@ -214,6 +231,70 @@ benchmark_full_no_fastp() {
             --no-fastp \
             --no-qc 2>/dev/null"
 
+    log_info "Results saved to $result_json"
+}
+
+# Benchmark 4: Thread scaling — fix 1 job, vary threads per sample
+benchmark_thread_scaling() {
+    log_info "=== Benchmark: Thread Scaling (1 job, variable threads) ==="
+
+    local result_json="$OUT_DIR/04_thread_scaling.json"
+
+    local cmd_args=(
+        --warmup 1
+        --runs "$RUNS"
+        --export-json "$result_json"
+        --export-markdown "$OUT_DIR/04_thread_scaling.md"
+    )
+
+    for t in "${THREAD_COUNTS[@]}"; do
+        local v1_out="$OUT_DIR/work/thread_scaling/v1_t${t}"
+        local v2_out="$OUT_DIR/work/thread_scaling/v2_t${t}"
+
+        cmd_args+=(
+            --prepare "rm -rf '$v1_out' '$v2_out'; mkdir -p '$v1_out'; cp '$SAMPLE1_R1' '$SAMPLE1_R2' '$v1_out/'"
+            --command-name "v1-t${t}"
+            "bash '$V1_WRAPPER' -i '$v1_out' -j 1 -t $t -r '$REF' -u $UMI_LENGTH -s $SPACER_LENGTH --merge --skip-fastqc --skip-multiqc 2>/dev/null"
+            --prepare "rm -rf '$v2_out'"
+            --command-name "v2-t${t}"
+            "umierrorcorrect2 run -r1 '$SAMPLE1_R1' -r2 '$SAMPLE1_R2' -r '$REF' -ul $UMI_LENGTH -sl $SPACER_LENGTH -t $t -j 1 -o '$v2_out' 2>/dev/null"
+        )
+    done
+
+    hyperfine "${cmd_args[@]}"
+    log_info "Results saved to $result_json"
+}
+
+# Benchmark 5: Parallel jobs scaling — fix 4 threads/job, vary number of concurrent jobs
+benchmark_parallel_jobs() {
+    log_info "=== Benchmark: Parallel Jobs Scaling (${THREADS_PER_JOB} threads/job, variable jobs) ==="
+    log_info "Using samples from: $PARALLEL_SAMPLE_DIR"
+
+    local result_json="$OUT_DIR/05_parallel_jobs.json"
+
+    local cmd_args=(
+        --warmup 1
+        --runs "$RUNS"
+        --export-json "$result_json"
+        --export-markdown "$OUT_DIR/05_parallel_jobs.md"
+    )
+
+    for j in "${JOB_COUNTS[@]}"; do
+        local total_threads=$(( THREADS_PER_JOB * j ))
+        local v1_out="$OUT_DIR/work/parallel_jobs/v1_j${j}"
+        local v2_out="$OUT_DIR/work/parallel_jobs/v2_j${j}"
+
+        cmd_args+=(
+            --prepare "rm -rf '$v1_out' '$v2_out'; mkdir -p '$v1_out'"
+            --command-name "v1-j${j}"
+            "bash '$V1_WRAPPER' -i '$PARALLEL_SAMPLE_DIR' -j $j -t $THREADS_PER_JOB -r '$REF' -u $UMI_LENGTH -s $SPACER_LENGTH --merge --skip-fastqc --skip-multiqc 2>/dev/null"
+            --prepare "rm -rf '$v2_out'"
+            --command-name "v2-j${j}"
+            "umierrorcorrect2 run -i '$PARALLEL_SAMPLE_DIR' -r '$REF' -ul $UMI_LENGTH -sl $SPACER_LENGTH -t $total_threads -j $j -o '$v2_out' 2>/dev/null"
+        )
+    done
+
+    hyperfine "${cmd_args[@]}"
     log_info "Results saved to $result_json"
 }
 
@@ -328,6 +409,7 @@ preserve_results() {
         -r "$REF" \
         -u $UMI_LENGTH \
         -s $SPACER_LENGTH \
+        -j 1 \
         -t $THREADS \
         --merge 2>/dev/null || log_warn "v1 production run had warnings"
 
@@ -363,7 +445,9 @@ generate_summary() {
 # UMIErrorCorrect Benchmark Summary
 
 **Date:** $(date)
-**Threads:** $THREADS
+**Threads (single-run):** $THREADS
+**Thread scaling tested:** ${THREAD_COUNTS[*]}
+**Parallel jobs tested:** ${JOB_COUNTS[*]} (${THREADS_PER_JOB} threads/job)
 **Runs per benchmark:** $RUNS
 **Sample:** $SAMPLE1_NAME
 **UMI Length:** $UMI_LENGTH
@@ -411,6 +495,8 @@ main() {
     if [[ "$SKIP_FULL" == false ]]; then
         benchmark_full_with_fastp
         benchmark_full_no_fastp
+        benchmark_thread_scaling
+        benchmark_parallel_jobs
     fi
 
     #benchmark_umi_only

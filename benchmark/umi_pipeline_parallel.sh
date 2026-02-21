@@ -16,7 +16,8 @@ display_help() {
     echo "   -r, --reference             Path to the indexed reference genome."
     echo "   -u, --umi_length            Length of the Unique Molecular Identifier (UMI). Default is 19."
     echo "   -s, --spacer_length         Spacer sequence length between reads. Default is 16."
-    echo "   -t, --threads               Number of parallel jobs to run. Default is 8."
+    echo "   -j, --jobs                  Number of parallel samples to process with GNU parallel. Default is half of available CPUs."
+    echo "   -t, --threads               Number of threads per sample (passed to umierrorcorrect and fastp). Default is 4."
     echo "   -f, --no_filtering          Skip fastp filtering step for FASTQ files."
     echo "   -q, --phred_score           Minimum Phred score threshold for fastp quality filtering. Default is 20."
     echo "   -p, --percent_low_quality   Maximum percentage of low-quality bases per read. Default is 40."
@@ -32,7 +33,8 @@ display_help() {
 ##########################
 umi_length=19
 spacer_length=16
-threads=$(($(nproc) / 2))
+jobs=$(($(nproc) / 2))
+threads=4
 do_filtering=true
 use_bed=""  # Empty string so ${use_bed:+-bed "$BED"} doesn't expand when no -b flag
 phred_score=20
@@ -52,6 +54,7 @@ while [[ "$#" -gt 0 ]]; do
     -r|--reference) REF="$2"; shift ;;
     -u|--umi_length) umi_length="$2"; shift ;;
     -s|--spacer_length) spacer_length="$2"; shift ;;
+    -j|--jobs) jobs="$2"; shift ;;
     -t|--threads) threads="$2"; shift ;;
     -f|--no_filtering) do_filtering=false ;;
     -q|--phred_score) phred_score="$2"; shift ;;
@@ -128,7 +131,7 @@ run_fastp() {
               --merge --merged_out="$outfile" \
               --qualified_quality_phred="$phred_score" \
               --unqualified_percent_limit="$percent_low_quality" \
-              --thread=$((threads / 2)) || {
+              --thread="$threads" || {
             log_msg "Error: fastp failed for $fq1 and $fq2"
             return 1
         }
@@ -139,7 +142,7 @@ run_fastp() {
               --out1="$out1" --out2="$out2" \
               --qualified_quality_phred="$phred_score" \
               --unqualified_percent_limit="$percent_low_quality" \
-              --thread=$((threads / 2)) || {
+              --thread="$threads" || {
             log_msg "Error: fastp failed for $fq1 and $fq2"
             return 1
         }
@@ -216,16 +219,16 @@ process_fastq_pair() {
 ######################
 export -f process_fastq_pair log_msg run_fastp run_umierrorcorrect
 export runDir FILTERED_DIR UMI_CORRECTED_DIR TEMP_DIR do_filtering use_bed umi_length \
-       spacer_length threads BED REF phred_score percent_low_quality merge_reads
+       spacer_length jobs threads BED REF phred_score percent_low_quality merge_reads
 
-find "$runDir" -type f -name "*R1*.fastq.gz" | parallel --joblog "$runDir/job.log" -j "$threads" process_fastq_pair {}
+find "$runDir" -type f -name "*R1*.fastq.gz" | parallel --joblog "$runDir/job.log" -j "$jobs" process_fastq_pair {}
 
 ##############################
 # Quality Control with FastQC and MultiQC
 ##############################
 if ! $skip_fastqc && command -v fastqc &> /dev/null; then
     log_msg "Running FastQC in parallel..."
-    find "$runDir" -type f -name "*.fastq.gz" | parallel -j "$threads" fastqc -o "$runDir/qc_reports" {}
+    find "$runDir" -type f -name "*.fastq.gz" | parallel -j "$jobs" fastqc -o "$runDir/qc_reports" {}
 fi
 
 if ! $skip_multiqc && command -v multiqc &> /dev/null; then

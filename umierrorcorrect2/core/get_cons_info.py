@@ -128,7 +128,10 @@ def get_cons_info(consensus_seq, singletons, fsizes=DEFAULT_FAMILY_SIZES):
                         i += 1
 
     for read in singletons.values():
-        if "I" not in read.cigarstring and "D" not in read.cigarstring:
+        cigar = read.cigarstring
+        if cigar is None:
+            continue
+        if "I" not in cigar and "D" not in cigar:
             sequence = read.query_sequence
             for qpos, refpos in read.get_aligned_pairs(matches_only=True):
                 base = sequence[qpos]
