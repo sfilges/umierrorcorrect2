@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **Docker: fastp installation**: Replaced unverified GitHub binary download of fastp with `apt-get install fastp` (Ubuntu 24.04 provides v0.23.4), ensuring package integrity via GPG-signed apt infrastructure and adding multi-architecture support.
+- **CI: Docker workflow branch**: Corrected workflow trigger branch from `main` to `master` so the Docker publish workflow fires on pushes to the correct default branch.
+- **CI: Docker workflow tags/labels**: Fixed incorrect `id.meta.outputs` expression (not valid GitHub Actions syntax) to `steps.meta.outputs`, ensuring the published image is correctly tagged and labelled.
+
 ## [0.32.2] - 2026-02-21
 
 ### Fixed

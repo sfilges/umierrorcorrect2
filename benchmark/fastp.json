@@ -319,5 +319,5 @@
 		"overrepresented_sequences": {
 		}
 	},
-	"command": "fastp --in1=/home/stefan/Documents/GitHub/umierrorcorrect2/benchmark/results/work/v1_fastp/LOD-PiK3CA-100-ng-WT-6_R1_001.fastq.gz --in2=/home/stefan/Documents/GitHub/umierrorcorrect2/benchmark/results/work/v1_fastp/LOD-PiK3CA-100-ng-WT-6_R2_001.fastq.gz --merge --merged_out=/home/stefan/Documents/GitHub/umierrorcorrect2/benchmark/results/work/v1_fastp/filtered_fastqs/LOD-PiK3CA-100-ng-WT-6_R1_001.merged.filtered.fastq.gz --qualified_quality_phred=20 --unqualified_percent_limit=40 --thread=4 "
+	"command": "fastp --in1=/home/stefan/Documents/GitHub/umierrorcorrect2/benchmark/results/work/thread_scaling/v1_t4/LOD-PiK3CA-100-ng-WT-6_R1_001.fastq.gz --in2=/home/stefan/Documents/GitHub/umierrorcorrect2/benchmark/results/work/thread_scaling/v1_t4/LOD-PiK3CA-100-ng-WT-6_R2_001.fastq.gz --merge --merged_out=/home/stefan/Documents/GitHub/umierrorcorrect2/benchmark/results/work/thread_scaling/v1_t4/filtered_fastqs/LOD-PiK3CA-100-ng-WT-6_R1_001.merged.filtered.fastq.gz --qualified_quality_phred=20 --unqualified_percent_limit=40 --thread=4 "
 }

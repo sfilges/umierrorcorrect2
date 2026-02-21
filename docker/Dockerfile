@@ -1,20 +1,20 @@
 ################## BASE IMAGE ######################
-# Build this image from the project root:
-# docker build -f docker/Dockerfile -t umierrorcorrect2:0.30.2 .
-
 FROM ubuntu:24.04
 
 ################## METADATA ######################
-LABEL base.image="ubuntu:24.04"
-LABEL version="0.31.1"
-LABEL software="umierrorcorrect2"
-LABEL software.version="0.31.1"
-LABEL about.summary="Modernized UMI error correction pipeline for barcoded amplicon sequencing"
-LABEL about.home="https://github.com/sfilges/umierrorcorrect2"
-LABEL about.tags="Genomics,UMI,Bioinformatics"
+ARG VERSION="0.32.2"
+LABEL base.image="ubuntu:24.04" \
+      version="${VERSION}" \
+      software="umierrorcorrect2" \
+      software.version="${VERSION}" \
+      about.summary="Modernized UMI error correction pipeline for barcoded amplicon sequencing" \
+      about.home="https://github.com/sfilges/umierrorcorrect2" \
+      about.tags="Genomics,UMI,Bioinformatics"
 
 # Prevent interactive prompts during package installation
-ENV DEBIAN_FRONTEND=noninteractive
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -34,31 +34,37 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     bwa \
     mafft \
     samtools \
+    fastp \
     && rm -rf /var/lib/apt/lists/*
 
-# Install fastp binary
-RUN curl -L http://opengene.org/fastp/fastp > /usr/local/bin/fastp && \
-    chmod a+x /usr/local/bin/fastp
-
 # Install uv
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
-
-# Set working directory for application
-WORKDIR /app
+COPY --from=ghcr.io/astral-sh/uv:0.5.24 /uv /usr/local/bin/uv
 
 # Set up Python environment with uv
-ENV UV_COMPILE_BYTECODE=1
-ENV VIRTUAL_ENV=/opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
+ENV UV_COMPILE_BYTECODE=1 \
+    VIRTUAL_ENV=/opt/venv \
+    PATH="/opt/venv/bin:$PATH"
 
-# Copy project files and install
-COPY . .
+WORKDIR /app
+
+# Create a non-root user and set up directories
+RUN groupadd -r umicorr && useradd -r -g umicorr -m -d /home/umicorr umicorr && \
+    mkdir -p /data /opt/venv && chown -R umicorr:umicorr /data /opt/venv /app
+
+# Switch to non-root user
+USER umicorr
+
+# Install dependencies first (better caching)
+# We use uv sync --no-install-project to only install dependencies
+COPY --chown=umicorr:umicorr pyproject.toml uv.lock ./
 RUN uv venv $VIRTUAL_ENV && \
-    uv pip install --no-cache .[fast] cutadapt
+    uv sync --no-dev --no-install-project
 
-# Set working directory for data
+# Copy the rest of the application and install it
+COPY --chown=umicorr:umicorr . .
+RUN uv pip install --no-cache .
+
 WORKDIR /data
 
 # Default command
 ENTRYPOINT ["umierrorcorrect2"]
-CMD ["--help"]
