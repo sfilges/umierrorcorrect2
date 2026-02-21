@@ -113,8 +113,8 @@ def downsample_reads_per_region(hist, _fraction, fsizes, onlyNamed=True):
             # singnames: list of singleton indices (e.g., [3, 4])
             singnames = list(range(num_families, num_families + h.singletons))
 
-            # Convert to np.array
-            times = np.array(h.family_sizes)
+            # Convert to np.array (cast to int to avoid float64 issues with np.repeat)
+            times = np.array(h.family_sizes, dtype=int)
 
             # Expand the temp names by the number of reads per family
             # Result: [0,0,0,0,0, 1,1,1, 2,2,2,2,2,2,2,2,2,2]

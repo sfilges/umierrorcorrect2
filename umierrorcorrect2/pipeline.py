@@ -6,7 +6,7 @@ This module provides the main entry point for running the complete UMI error
 correction pipeline on a single sample.
 
 Pipeline Flow:
-    FASTQ -> preprocess -> align_bwa -> umi_error_correct -> get_consensus_statistics -> call_variants -> VCF
+    FASTQ -> preprocess -> align_bwa -> umi_error_correct -> get_consensus_statistics -> downsampling -> call_variants -> VCF
 
 External Dependencies:
     - bwa: Required for sequence mapping (must have indexed reference genome)
@@ -22,6 +22,7 @@ from umierrorcorrect2.call_variants import run_call_variants
 from umierrorcorrect2.core.check_args import check_args_fastq
 from umierrorcorrect2.core.logging_config import get_logger
 from umierrorcorrect2.core.utils import get_sample_name
+from umierrorcorrect2.downsampling import run_downsampling
 from umierrorcorrect2.get_consensus_statistics import run_get_consensus_statistics
 from umierrorcorrect2.preprocess import run_preprocessing
 from umierrorcorrect2.umi_error_correct import run_umi_errorcorrect
@@ -136,7 +137,16 @@ def run_pipeline(args):
     args.cons_file = None
 
     # -----------------------------------------
+    # Run downsampling
+    # -----------------------------------------
+    logger.info("Starting downsampling")
+    run_downsampling(args.output_path, cons_bam, args.bed_file, None, args.sample_name)
+    logger.info("Finished downsampling")
+
+    # -----------------------------------------
     # Run variant calling
     # -----------------------------------------
+    logger.info("Starting variant calling")
     run_call_variants(args)
-    logger.info("Finished UMI Error Correct")
+    logger.info("Finished variant calling")
+    logger.info("Finished umierrorcorrect2 pipeline")

@@ -16,7 +16,7 @@ This package is a **complete modernization** of the original [UMIErrorCorrect](h
 - **High Performance**: Parallel processing of genomic regions and fastp-based preprocessing.
 - **Modern Tooling**: Built with `typer`, `pydantic`, `loguru`, and `hatch`.
 - **Easy Installation**: Fully PEP 621 compliant, installable via `pip` or `uv`.
-- **Comprehensive**: From raw FASTQ to error-corrected VCFs and consensus statistics.
+- **Comprehensive**: From raw FASTQ to error-corrected VCFs, consensus statistics, and downsampling analysis.
 - **Robust**: Extensive test suite and type safety.
 
 ## Dependencies
