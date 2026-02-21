@@ -1,9 +1,41 @@
-################## BASE IMAGE ######################
-FROM ubuntu:24.04
+# Stage 1: Build stage
+FROM ghcr.io/astral-sh/uv:0.5.24-python3.12-bookworm-slim AS builder
 
-################## METADATA ######################
-ARG VERSION="0.32.2"
-LABEL base.image="ubuntu:24.04" \
+# Set environment variables for uv
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    VIRTUAL_ENV=/opt/venv
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    g++ \
+    libbz2-dev \
+    liblzma-dev \
+    zlib1g-dev \
+    libcurl4-openssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install dependencies using uv
+# We use cache mounts to keep the image small and speed up repeated builds
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    uv venv $VIRTUAL_ENV && \
+    uv sync --no-dev --no-install-project
+
+# Copy source and install the project
+COPY . .
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install .
+
+# Stage 2: Final runtime stage
+FROM python:3.12-slim-bookworm
+
+ARG VERSION="0.32.4"
+LABEL base.image="python:3.12-slim-bookworm" \
       version="${VERSION}" \
       software="umierrorcorrect2" \
       software.version="${VERSION}" \
@@ -11,58 +43,40 @@ LABEL base.image="ubuntu:24.04" \
       about.home="https://github.com/sfilges/umierrorcorrect2" \
       about.tags="Genomics,UMI,Bioinformatics"
 
-# Prevent interactive prompts during package installation
+# Prevent interactive prompts and Python bloat
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+    PYTHONDONTWRITEBYTECODE=1 \
+    MPLBACKEND=Agg \
+    PATH="/opt/venv/bin:$PATH" \
+    VIRTUAL_ENV=/opt/venv
 
-# Install system dependencies
+WORKDIR /app
+
+# Install runtime dependencies (bioinformatics tools and shared libraries)
+# Essential libraries for tools (bwa, samtools, fastp) and Python libs (pysam)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    ca-certificates \
-    libbz2-dev \
-    liblzma-dev \
-    libz-dev \
-    libcurl4-openssl-dev \
-    bzip2 \
-    xz-utils \
-    gcc \
-    g++ \
-    python3-dev \
-    python3-pip \
     pigz \
     bwa \
     mafft \
     samtools \
     fastp \
+    libbz2-1.0 \
+    liblzma5 \
+    zlib1g \
+    libcurl4 \
+    libgomp1 \
     && rm -rf /var/lib/apt/lists/*
-
-# Install uv
-COPY --from=ghcr.io/astral-sh/uv:0.5.24 /uv /usr/local/bin/uv
-
-# Set up Python environment with uv
-ENV UV_COMPILE_BYTECODE=1 \
-    VIRTUAL_ENV=/opt/venv \
-    PATH="/opt/venv/bin:$PATH"
-
-WORKDIR /app
 
 # Create a non-root user and set up directories
 RUN groupadd -r umicorr && useradd -r -g umicorr -m -d /home/umicorr umicorr && \
-    mkdir -p /data /opt/venv && chown -R umicorr:umicorr /data /opt/venv /app
+    mkdir -p /data && chown -R umicorr:umicorr /data /app
+
+# Copy the pre-built virtual environment from the builder stage
+COPY --from=builder --chown=umicorr:umicorr /opt/venv /opt/venv
 
 # Switch to non-root user
 USER umicorr
-
-# Install dependencies first (better caching)
-# We use uv sync --no-install-project to only install dependencies
-COPY --chown=umicorr:umicorr pyproject.toml uv.lock ./
-RUN uv venv $VIRTUAL_ENV && \
-    uv sync --no-dev --no-install-project
-
-# Copy the rest of the application and install it
-COPY --chown=umicorr:umicorr . .
-RUN uv pip install --no-cache .
 
 WORKDIR /data
 
