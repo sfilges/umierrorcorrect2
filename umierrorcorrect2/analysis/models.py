@@ -14,7 +14,7 @@ class Mutation(BaseModel):
 
     name: str
     chromosome: str
-    position: int  # 0-based start position
+    position: int  # 1-based genomic position (matches cons.tsv Position column)
     reference: str
     alternate: str
 

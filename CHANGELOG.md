@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+## [0.33.3] - 2026-02-22
+
+### Changed
+
+- **Coordinate system alignment**: Standardized on 1-based coordinates for mutations in `Mutation` model and BED templates to match `cons.tsv` conventions.
+- **Improved VAF calculation**: Refactored `PostProcessor` to use independent per-base alt allele counts for VAF and ctDNA ppm calculations, ensuring accurate tracking even when multiple mutations occur at the same locus or when the target mutation is not the dominant non-ref allele.
+
+### Fixed
+
+- **Linting in unit tests**: Resolved Ruff E712 errors in `tests/unit/test_post_processor.py` by replacing explicit boolean comparisons with idiomatic truthy/falsy checks.
+
 ## [0.33.2] - 2026-02-22
 
 ### Added

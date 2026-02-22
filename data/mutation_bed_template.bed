@@ -1,5 +1,5 @@
 # Mutation BED file format for ctDNA tracking
-# Columns: chrom, start (0-based), end, name, ref, alt
+# Columns: chrom, start (1-based), end, name, ref, alt
 # Example mutations for patient tracking
 chr3	179210192	179210192	PIK3CA_p.C420R	T	C
 chr3	179218294	179218294	PIK3CA_p.E542K	G	A

@@ -13,6 +13,20 @@ from umierrorcorrect2.core.logging_config import get_logger
 logger = get_logger("post_processor")
 
 _SUMMARY_STATS_SUFFIX = "_summary_statistics.txt"
+_ALT_COLS = {"A", "C", "G", "T", "I", "D"}
+
+
+def _get_alt_allele_count(row: pd.Series) -> int:
+    """Return the read count for the expected alt allele from per-base columns.
+
+    Uses the per-base count columns (A/C/G/T/I/D) so that each mutation is
+    evaluated independently, regardless of which allele is the overall max
+    non-ref allele at that position.
+    """
+    alt = row.get("expected_alt")
+    if pd.isna(alt) or alt not in _ALT_COLS:
+        return 0
+    return int(row.get(alt, 0))
 
 
 class PostProcessor:
@@ -80,7 +94,7 @@ class PostProcessor:
         cons_df must have is_mutation, expected_alt, and alt_matches columns,
         as produced by aggregate_cons() with mutation_bed.
         """
-        required = {"is_mutation", "expected_alt", "alt_matches"}
+        required = {"is_mutation", "expected_alt", "alt_matches", "alt_allele_count"}
         if missing := required - set(cons_df.columns):
             raise ValueError(f"cons_df missing columns: {missing}. Call aggregate_cons(mutation_bed=...) first.")
 
@@ -88,19 +102,14 @@ class PostProcessor:
         if df.empty:
             return pd.DataFrame()
 
-        # Zero out count/frequency where alt doesn't match expected
-        not_detected = ~df["alt_matches"]
-        df.loc[not_detected, "Max Non-ref Allele Count"] = 0
-        df.loc[not_detected, "Max Non-ref Allele Frequency"] = 0.0
-
         coverage = df["Coverage"].replace(0, float("nan"))
-        df["VAF (%)"] = (df["Max Non-ref Allele Count"] / coverage * 100.0).fillna(0.0)
-        df["ctDNA ppm"] = (df["Max Non-ref Allele Count"] / coverage * 1e6).fillna(0.0)
+        df["VAF (%)"] = (df["alt_allele_count"] / coverage * 100.0).fillna(0.0)
+        df["ctDNA ppm"] = (df["alt_allele_count"] / coverage * 1e6).fillna(0.0)
 
         if ml_plasma_map:
             df["mm_per_ml"] = df.apply(
                 lambda row: (
-                    row["Max Non-ref Allele Count"] / ml_plasma_map[row["Sample Name"]]
+                    row["alt_allele_count"] / ml_plasma_map[row["Sample Name"]]
                     if row["Sample Name"] in ml_plasma_map and ml_plasma_map[row["Sample Name"]] > 0
                     else None
                 ),
@@ -129,8 +138,8 @@ class PostProcessor:
         mutation_positions: set[tuple[str, int]] | None = None
         if mutation_bed is not None and region_bed is None:
             mutations = load_mutations(mutation_bed)
-            # BED 0-based start → 1-based cons Position
-            mutation_positions = {(m.chromosome, m.position + 1) for m in mutations}
+            # BED 1-based cons Position
+            mutation_positions = {(m.chromosome, m.position) for m in mutations}
 
         rows = [self._compute_sample_on_target(sample_dir, region_bed, mutation_positions) for sample_dir in dirs]
         return pd.DataFrame(rows)
@@ -245,7 +254,7 @@ class PostProcessor:
             [
                 {
                     "Contig": m.chromosome,
-                    "Position": m.position + 1,  # BED 0-based → 1-based cons position
+                    "Position": m.position,  # BED position matches 1-based cons.tsv Position
                     "mutation_name": m.name,
                     "expected_alt": m.alternate,
                 }
@@ -254,7 +263,8 @@ class PostProcessor:
         )
         df = df.merge(mut_df, on=["Contig", "Position"], how="left")
         df["is_mutation"] = df["mutation_name"].notna()
-        df["alt_matches"] = df["is_mutation"] & (df["Max Non-ref Allele"] == df["expected_alt"])
+        df["alt_allele_count"] = df.apply(_get_alt_allele_count, axis=1)
+        df["alt_matches"] = df["is_mutation"] & (df["alt_allele_count"] > 0)
         return df
 
     def _on_target_from_summary_stats(self, sample_dir: Path) -> tuple[int | None, str]:
