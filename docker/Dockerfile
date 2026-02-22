@@ -27,7 +27,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=umierrorcorrect2,target=umierrorcorrect2 \
     --mount=type=bind,source=README.md,target=README.md \
     uv venv $VIRTUAL_ENV && \
-    uv sync --no-dev --no-install-project
+    uv sync --frozen --no-dev --no-install-project
 
 # Copy source and install the project
 COPY . .
