@@ -407,11 +407,6 @@ def run(
     bed_file: Annotated[
         Optional[Path], typer.Option("-rb", "--regions-bed", help="Path to BED file defining targeted regions.")
     ] = None,
-    # TODO: Mutation bed is currently not used, but will be required for reporting in the future.
-    mut_bed: Annotated[
-        Optional[Path],
-        typer.Option("-mb", "--mutations-bed", help="Path to BED file defining patient-specific mutation positions."),
-    ] = None,
     umi_length: Annotated[int, typer.Option("-ul", "--umi-length", help="Length of UMI sequence.")] = 19,
     spacer_length: Annotated[
         int, typer.Option("-sl", "--spacer-length", help="Length of spacer between UMI and read.")
