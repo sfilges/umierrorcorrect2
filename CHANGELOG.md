@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Refactored Mutation Loading**: Moved mutation loading logic into a standalone `load_mutations` function for better architectural separation and maintainability.
 - **Robust BED Parsing**: Improved mutation BED parsing to gracefully handle and ignore additional columns beyond the required schema.
+- **Normalized File Suffixes**: Updated the analysis module to use the standard `_cons.tsv` suffix for consensus files, ensuring consistency with the core pipeline.
 
 ## [0.33.0] - 2026-02-22
 

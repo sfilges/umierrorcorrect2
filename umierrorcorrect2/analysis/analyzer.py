@@ -5,6 +5,7 @@ from pathlib import Path
 
 from umierrorcorrect2.analysis.models import AnalysisSample, load_mutations
 from umierrorcorrect2.analysis.mutation_tracker import MutationTracker
+from umierrorcorrect2.core.constants import CONSENSUS_TSV_SUFFIX
 from umierrorcorrect2.core.logging_config import get_logger
 
 logger = get_logger("analysis")
@@ -31,10 +32,10 @@ class Analyzer:
         mutations = load_mutations(sample.mutation_bed)
 
         # Locate .cons file
-        cons_file = output_dir / f"{sample.name}.cons"
+        cons_file = output_dir / f"{sample.name}{CONSENSUS_TSV_SUFFIX}"
         if not cons_file.exists():
             # Try searching for it if name differs
-            cons_files = list(output_dir.glob("*.cons"))
+            cons_files = list(output_dir.glob(f"*{CONSENSUS_TSV_SUFFIX}"))
             if cons_files:
                 cons_file = cons_files[0]
             else:
@@ -46,7 +47,7 @@ class Analyzer:
         sample.results = results
 
         # Create simplified cons file
-        simplified_cons = output_dir / f"{sample.name}_patient_mutations.cons"
+        simplified_cons = output_dir / f"{sample.name}_patient_mutations{CONSENSUS_TSV_SUFFIX}"
         self.tracker.create_simplified_cons(cons_file, mutations, simplified_cons)
 
         logger.info(f"Analysis complete for {sample.name}.")

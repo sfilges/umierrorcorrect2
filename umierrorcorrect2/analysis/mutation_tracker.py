@@ -6,7 +6,7 @@ from umierrorcorrect2.analysis.models import Mutation, MutationResult
 
 
 class MutationTracker:
-    """Extract mutation information from .cons files."""
+    """Extract mutation information from consensus TSV files."""
 
     def __init__(self, family_size: int = 3):
         self.family_size = family_size
@@ -18,7 +18,7 @@ class MutationTracker:
         ml_plasma: float | None = None,
     ) -> list[MutationResult]:
         """
-        Find mutation positions in .cons file and calculate metrics for a specific family size.
+        Find mutation positions in consensus TSV file and calculate metrics for a specific family size.
         """
         results = []
         # Index mutations by (contig, position) for faster lookup
@@ -88,7 +88,7 @@ class MutationTracker:
         mutations: list[Mutation],
         output_file: Path,
     ) -> None:
-        """Create a simplified .cons file with only tracked mutations at the family size."""
+        """Create a simplified consensus TSV file with only tracked mutations at the family size."""
         mut_map = {(m.chromosome, m.position + 1) for m in mutations}
 
         with cons_file.open() as f_in, output_file.open("w") as f_out:
