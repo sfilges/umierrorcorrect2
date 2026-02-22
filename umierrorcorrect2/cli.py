@@ -358,6 +358,75 @@ def downsampling(
     logger.info("Downsampling analysis complete!")
 
 
+@app.command()
+def analysis(
+    sample_sheet: Annotated[
+        Path,
+        typer.Option("--sample-sheet", "-s", help="Extended sample sheet CSV for analysis metadata."),
+    ],
+    results_dir: Annotated[
+        Path,
+        typer.Option("--results-dir", "-r", help="Directory containing umierrorcorrect2 output samples/."),
+    ],
+    output_dir: Annotated[
+        Optional[Path],
+        typer.Option("-o", "--output-dir", help="Output directory for analysis reports."),
+    ] = None,
+    family_size: Annotated[
+        int,
+        typer.Option("-f", "--family-size", help="Family size threshold for analysis."),
+    ] = 3,
+) -> None:
+    """Run extended analysis on umierrorcorrect2 results.
+
+    Performs mutation tracking, on-target calculation, and generates
+    HTML reports for samples in the provided extended sample sheet.
+
+    Examples:
+        umierrorcorrect2 analysis -s samples_extended.csv -r results/samples/ -o reports/
+    """
+    from umierrorcorrect2.analysis import AnalysisSampleSheet, Analyzer, HTMLReporter
+
+    # Set up file logging
+    out_path = output_dir or results_dir / "analysis_reports"
+    out_path.mkdir(parents=True, exist_ok=True)
+    log_path = get_log_path(out_path)
+    add_file_handler(log_path)
+    logger.info(f"Logging analysis to {log_path}")
+
+    try:
+        with console.status("[cyan]Parsing extended sample sheet..."):
+            sheet = AnalysisSampleSheet(csv_path=sample_sheet, base_path=sample_sheet.parent)
+        console.print(f"[green]✓[/green] Loaded {len(sheet.samples)} samples for analysis")
+
+        analyzer = Analyzer(family_size=family_size)
+        reporter = HTMLReporter(output_dir=out_path)
+
+        for sample in sheet.samples:
+            # Each sample's core results should be in results_dir/sample_name
+            sample_res_dir = results_dir / sample.name
+            if not sample_res_dir.exists():
+                console.print(
+                    f"[yellow]Warning:[/yellow] Results directory not found for {sample.name}: {sample_res_dir}"
+                )
+                continue
+
+            with console.status(f"[cyan]Analyzing {sample.name}..."):
+                analyzer.analyze_sample(sample, sample_res_dir)
+
+                report_file = out_path / f"{sample.name}_report.html"
+                reporter.generate_report(sample, family_size, report_file)
+
+            console.print(f"  [green]✓[/green] Analysis report: {report_file}")
+
+        console.print(f"\n[bold green]Analysis complete![/bold green] Reports saved to {out_path}")
+
+    except Exception as e:
+        console.print(f"[red]Analysis failed:[/red] {e}")
+        logger.exception("Analysis failed")
+        raise typer.Exit(1) from e
+
+
 @app.command(name="fit-model")
 def fit_model(
     cons_file: Annotated[Path, typer.Option("--cons", help="Path to cons.tsv file.")],

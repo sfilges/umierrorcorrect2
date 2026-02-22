@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.33.0] - 2026-02-22
+
+### Added
+
+- **Analysis Module**: Introduced a specialized sub-module in `umierrorcorrect2/analysis/` for post-hoc interpretation of UMI data.
+- **New `analysis` Command**: Added `umierrorcorrect2 analysis` subcommand for patient-specific mutation tracking.
+- **Enhanced Reporting**: Integrated Jinja2-based HTML reporting with visualizations (SVG bar charts) for sample-level mutation analysis.
+- **Metadata Management**: Added `AnalysisSampleSheet` and extended `AnalysisSample` data models for rich metadata tracking.
+- **Jinja2 Dependency**: Added `jinja2` for robust and portable HTML report generation.
+
+### Changed
+
+- **Code Cleanup**: Removed unfinished ctDNA-specific code from the core package to focus on general UMI processing, then re-implemented it as a modular, extensible analysis package.
+
 ## [0.32.4] - 2026-02-21
 
 ### Added

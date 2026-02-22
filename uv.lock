@@ -2661,6 +2661,7 @@ name = "umierrorcorrect2"
 source = { editable = "." }
 dependencies = [
     { name = "cutadapt" },
+    { name = "jinja2" },
     { name = "loguru" },
     { name = "matplotlib" },
     { name = "multiqc" },
@@ -2684,6 +2685,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "cutadapt", specifier = ">=5.2" },
+    { name = "jinja2", specifier = ">=3.1.5" },
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "matplotlib", specifier = ">=3.10.8" },
     { name = "multiqc", specifier = ">=1.33" },

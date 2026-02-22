@@ -33,6 +33,7 @@ dependencies = [
     "cutadapt>=5.2",
     "multiqc>=1.33",
     "numba>=0.57.0",
+    "jinja2>=3.1.5",
 ]
 [project.optional-dependencies]
 dev = [
