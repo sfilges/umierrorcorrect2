@@ -4,6 +4,7 @@ from umierrorcorrect2.analysis.models import (
     AnalysisSampleSheet,
     Mutation,
     MutationResult,
+    load_mutations,
 )
 from umierrorcorrect2.analysis.reporting import HTMLReporter
 
@@ -13,5 +14,6 @@ __all__ = [
     "AnalysisSampleSheet",
     "Mutation",
     "MutationResult",
+    "load_mutations",
     "HTMLReporter",
 ]

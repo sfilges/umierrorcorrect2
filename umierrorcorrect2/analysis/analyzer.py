@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from umierrorcorrect2.analysis.models import AnalysisSample, Mutation
+from umierrorcorrect2.analysis.models import AnalysisSample, load_mutations
 from umierrorcorrect2.analysis.mutation_tracker import MutationTracker
 from umierrorcorrect2.core.logging_config import get_logger
 
@@ -28,7 +28,7 @@ class Analyzer:
             return
 
         # Load mutations
-        mutations = Mutation.load_from_bed(sample.mutation_bed)
+        mutations = load_mutations(sample.mutation_bed)
 
         # Locate .cons file
         cons_file = output_dir / f"{sample.name}.cons"

@@ -10,14 +10,7 @@ from umierrorcorrect2.models.models import Sample
 
 
 class Mutation(BaseModel):
-    """Patient-specific mutation to track (parsed from mutation BED file).
-
-    The mutation BED file format is:
-        chrom  start  end  name  ref  alt
-
-    Example:
-        chr3  178936091  178936091  PIK3CA_p.E545K  G  A
-    """
+    """Schema for a single patient-specific mutation."""
 
     name: str
     chromosome: str
@@ -25,30 +18,38 @@ class Mutation(BaseModel):
     reference: str
     alternate: str
 
-    @classmethod
-    def from_bed_line(cls, line: str) -> Mutation:
-        """Parse a single line from a mutation BED file."""
-        fields = line.strip().split("	")
-        if len(fields) < 6:
-            raise ValueError(f"Mutation BED line requires 6 fields (chrom, start, end, name, ref, alt): {line}")
-        return cls(
-            chromosome=fields[0],
-            position=int(fields[1]),
-            name=fields[3],
-            reference=fields[4],
-            alternate=fields[5],
-        )
 
-    @classmethod
-    def load_from_bed(cls, bed_path: Path) -> list[Mutation]:
-        """Load mutations from a BED file."""
-        mutations = []
-        with bed_path.open() as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith("#"):
-                    mutations.append(cls.from_bed_line(line))
-        return mutations
+def load_mutations(bed_path: Path) -> list[Mutation]:
+    """
+    Load a list of mutations from a mutation BED file.
+
+    The mutation BED file format is (tab-separated):
+        chrom  start  end  name  ref  alt
+    """
+    mutations = []
+    with bed_path.open() as f:
+        for line_num, line in enumerate(f, start=1):
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+
+            fields = line.split("\t")
+            if len(fields) < 6:
+                raise ValueError(
+                    f"Mutation BED ({bed_path}:{line_num}) requires 6 fields "
+                    f"(chrom, start, end, name, ref, alt): {line}"
+                )
+
+            mutations.append(
+                Mutation(
+                    chromosome=fields[0],
+                    position=int(fields[1]),
+                    name=fields[3],
+                    reference=fields[4],
+                    alternate=fields[5],
+                )
+            )
+    return mutations
 
 
 class MutationResult(BaseModel):
@@ -63,7 +64,7 @@ class MutationResult(BaseModel):
     @field_validator("vaf")
     @classmethod
     def validate_vaf(cls, v: float | None) -> float | None:
-        if v is not None and not 0.0 <= v <= 100.0:  # Allow 0-100 for percentage
+        if v is not None and not 0.0 <= v <= 100.0:
             raise ValueError(f"VAF must be between 0 and 100, got {v}")
         return v
 

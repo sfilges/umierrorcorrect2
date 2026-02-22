@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.33.1] - 2026-02-22
+
+### Added
+
+- **Unit Tests for Analysis**: Added comprehensive test suite for mutation loading logic, covering various edge cases including comments, empty lines, and malformed files.
+
+### Changed
+
+- **Refactored Mutation Loading**: Moved mutation loading logic into a standalone `load_mutations` function for better architectural separation and maintainability.
+- **Robust BED Parsing**: Improved mutation BED parsing to gracefully handle and ignore additional columns beyond the required schema.
+
 ## [0.33.0] - 2026-02-22
 
 ### Added
