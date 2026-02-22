@@ -4,6 +4,7 @@ FROM ghcr.io/astral-sh/uv:0.5.24-python3.12-bookworm-slim AS builder
 # Set environment variables for uv
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
+    UV_PROJECT_ENVIRONMENT=/opt/venv \
     VIRTUAL_ENV=/opt/venv
 
 WORKDIR /app
@@ -23,6 +24,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=umierrorcorrect2,target=umierrorcorrect2 \
+    --mount=type=bind,source=README.md,target=README.md \
     uv venv $VIRTUAL_ENV && \
     uv sync --no-dev --no-install-project
 
@@ -34,7 +37,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # Stage 2: Final runtime stage
 FROM python:3.12-slim-bookworm
 
-ARG VERSION="0.32.4"
+ARG VERSION="0.33.2"
 LABEL base.image="python:3.12-slim-bookworm" \
       version="${VERSION}" \
       software="umierrorcorrect2" \
