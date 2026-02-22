@@ -33,8 +33,11 @@ class MutationTracker:
                     continue
 
                 contig = parts[1]
-                pos = int(parts[2])
-                fsize = int(parts[13])
+                try:
+                    pos = int(parts[2])
+                    fsize = int(parts[13])
+                except ValueError:
+                    continue  # skip header row
 
                 if (contig, pos) in mut_map and fsize == self.family_size:
                     mutation = mut_map[(contig, pos)]
@@ -98,8 +101,11 @@ class MutationTracker:
                     continue
 
                 contig = parts[1]
-                pos = int(parts[2])
-                fsize = int(parts[13])
+                try:
+                    pos = int(parts[2])
+                    fsize = int(parts[13])
+                except ValueError:
+                    continue  # skip header row
 
                 if (contig, pos) in mut_map and fsize == self.family_size:
                     f_out.write(line)

@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.33.2] - 2026-02-22
+
+### Added
+
+- **`aggregate` CLI command**: New `umierrorcorrect2 aggregate` command that loads all `*_cons.tsv` files from sample subdirectories, filters to a specified consensus group size, and writes a combined `combined_cons.tsv`. Optionally re-annotates the `Name` column using a region BED (`--regions-bed`) or adds `is_mutation`/`alt_matches` columns via a mutation BED (`--mutation-bed`). Equivalent to R's `import_cons_data()` from the simsenR package.
+- **`summarize` CLI command**: New `umierrorcorrect2 summarize` command that computes per-sample on-target read fractions (using `fastp.json` as the total reads denominator at `Consensus group size == 0`) and, when a mutation BED is provided, per-mutation metrics (VAF, ctDNA ppm, mm_per_ml). Outputs `on_target_summary.tsv` and optionally `mutation_metrics.tsv`. Accepts an optional extended sample sheet (`--samplesheet`) for metadata such as `ml_plasma`.
+- **`PostProcessor` class**: New `umierrorcorrect2.analysis.PostProcessor` class exposing `aggregate_cons()`, `compute_mutation_metrics()`, and `compute_on_target_fractions()` as a Python API.
+- **`pandas` dependency**: Added `pandas>=2.0` as a project dependency to support DataFrame-based aggregation in the new analysis commands.
+
+### Fixed
+
+- **`MutationTracker` header-row crash**: `track_mutations()` and `create_simplified_cons()` now skip the `_cons.tsv` header row via a `try/except ValueError` guard around `int(parts[2])`, preventing a crash when the file is opened fresh.
+
 ## [0.33.1] - 2026-02-22
 
 ### Added
