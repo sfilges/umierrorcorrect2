@@ -5,91 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-
-## [0.33.3] - 2026-02-22
-
-### Changed
-
-- **Coordinate system alignment**: Standardized on 1-based coordinates for mutations in `Mutation` model and BED templates to match `cons.tsv` conventions.
-- **Improved VAF calculation**: Refactored `PostProcessor` to use independent per-base alt allele counts for VAF and ctDNA ppm calculations, ensuring accurate tracking even when multiple mutations occur at the same locus or when the target mutation is not the dominant non-ref allele.
-
-### Fixed
-
-- **Linting in unit tests**: Resolved Ruff E712 errors in `tests/unit/test_post_processor.py` by replacing explicit boolean comparisons with idiomatic truthy/falsy checks.
-
-## [0.33.2] - 2026-02-22
-
-### Added
-
-- **`aggregate` CLI command**: New `umierrorcorrect2 aggregate` command that loads all `*_cons.tsv` files from sample subdirectories, filters to a specified consensus group size, and writes a combined `combined_cons.tsv`. Optionally re-annotates the `Name` column using a region BED (`--regions-bed`) or adds `is_mutation`/`alt_matches` columns via a mutation BED (`--mutation-bed`). Equivalent to R's `import_cons_data()` from the simsenR package.
-- **`summarize` CLI command**: New `umierrorcorrect2 summarize` command that computes per-sample on-target read fractions (using `fastp.json` as the total reads denominator at `Consensus group size == 0`) and, when a mutation BED is provided, per-mutation metrics (VAF, ctDNA ppm, mm_per_ml). Outputs `on_target_summary.tsv` and optionally `mutation_metrics.tsv`. Accepts an optional extended sample sheet (`--samplesheet`) for metadata such as `ml_plasma`.
-- **`PostProcessor` class**: New `umierrorcorrect2.analysis.PostProcessor` class exposing `aggregate_cons()`, `compute_mutation_metrics()`, and `compute_on_target_fractions()` as a Python API.
-- **`pandas` dependency**: Added `pandas>=2.0` as a project dependency to support DataFrame-based aggregation in the new analysis commands.
-
-### Fixed
-
-- **`MutationTracker` header-row crash**: `track_mutations()` and `create_simplified_cons()` now skip the `_cons.tsv` header row via a `try/except ValueError` guard around `int(parts[2])`, preventing a crash when the file is opened fresh.
-
-## [0.33.1] - 2026-02-22
-
-### Added
-
-- **Unit Tests for Analysis**: Added comprehensive test suite for mutation loading logic, covering various edge cases including comments, empty lines, and malformed files.
+## [0.32.1] - 2026-01-31
 
 ### Changed
 
-- **Refactored Mutation Loading**: Moved mutation loading logic into a standalone `load_mutations` function for better architectural separation and maintainability.
-- **Robust BED Parsing**: Improved mutation BED parsing to gracefully handle and ignore additional columns beyond the required schema.
-- **Normalized File Suffixes**: Updated the analysis module to use the standard `_cons.tsv` suffix for consensus files, ensuring consistency with the core pipeline.
-
-## [0.33.0] - 2026-02-22
-
-### Added
-
-- **Analysis Module**: Introduced a specialized sub-module in `umierrorcorrect2/analysis/` for post-hoc interpretation of UMI data.
-- **New `analysis` Command**: Added `umierrorcorrect2 analysis` subcommand for patient-specific mutation tracking.
-- **Enhanced Reporting**: Integrated Jinja2-based HTML reporting with visualizations (SVG bar charts) for sample-level mutation analysis.
-- **Metadata Management**: Added `AnalysisSampleSheet` and extended `AnalysisSample` data models for rich metadata tracking.
-- **Jinja2 Dependency**: Added `jinja2` for robust and portable HTML report generation.
-
-### Changed
-
-- **Code Cleanup**: Removed unfinished ctDNA-specific code from the core package to focus on general UMI processing, then re-implemented it as a modular, extensible analysis package.
-
-## [0.32.4] - 2026-02-21
-
-### Added
-
-- **Added downsampling** to the pipeline by default.
-- **Updated CI workflows** for Docker to only run on tags.
-- **Updated documeentation** to reflect current implementation.
-- **Fixed numpy cast error** in `downsampling.py`.
-
-## [0.32.3] - 2026-02-21
-
-### Fixed
-
-- **Docker: fastp installation**: Replaced unverified GitHub binary download of fastp with `apt-get install fastp` (Ubuntu 24.04 provides v0.23.4), ensuring package integrity via GPG-signed apt infrastructure and adding multi-architecture support.
-- **CI: Docker workflow branch**: Corrected workflow trigger branch from `main` to `master` so the Docker publish workflow fires on pushes to the correct default branch.
-- **CI: Docker workflow tags/labels**: Fixed incorrect `id.meta.outputs` expression (not valid GitHub Actions syntax) to `steps.meta.outputs`, ensuring the published image is correctly tagged and labelled.
-
-## [0.32.2] - 2026-02-21
-
-### Fixed
-
-- **Unmapped reads crash**: Fixed a `TypeError` ("argument of type 'NoneType' is not a container or iterable") that occurred during consensus generation when unmapped mate-pair reads were fetched from the BAM file. Unmapped reads stored at their mapped mate's coordinates are now skipped in `get_cons_dict` (root cause) and `get_cons_info` guards against a `None` cigar string defensively. This crash was reproducible when running without fastp pre-filtering.
-
-## [0.32.1] - 2026-02-02
-
-### Added
-
-- **Console Status**: Added console status updates for FastQC and MultiQC to provide better feedback during batch processing.
-
-### Changed
-
-- **Batch Processing**: Improved batch processing to show progress and status updates for each sample.
-- **Mutation BED Template**: Added mutation BED template file for ctDNA tracking to reflect the test data.
-- **VCF Output**: VCF output now contains all variants even if not bed file is provided to provide name annotations.
+- **Type Hints**: Added type hints to `umierrorcorrect2/core/filter.py` for better static analysis.
+- **Docstrings**: Added docstrings to `umierrorcorrect2/core/filter.py` functions.
 
 ## [0.32.0] - 2026-01-30
 
@@ -101,14 +22,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **CLI Renamed**: The command-line tool has been renamed from `umierrorcorrect` to `umierrorcorrect2` to avoid conflicts with legacy installations.
-- **Type Safety**: Re-enabled and fixed strict `mypy` type checking for core modules: `core.consensus`, `core.group`, and `core.umi_cluster`.
 - **Renamed batch to run**: The `batch` command has been renamed to `run` to better reflect its purpose.
 
 ### Fixed
 
 - **Testing Infrastructure**: Fixed the `test_data_dir` fixture path in `tests/conftest.py` to correctly locate test resources.
 
-## [0.31.0] - 2026-01-31
+## [0.31.0] - 2026-01-30
 
 ### Changed
 
@@ -207,7 +127,6 @@ Initial release of umierrorcorrect2 (a fork of umierrorcorrect v0.29).
 - Fixed path handling issues using `pathlib`.
 
 ---
-[0.32.1]: https://github.com/sfilges/umierrorcorrect2/releases/tag/v0.32.1
 [0.32.0]: https://github.com/sfilges/umierrorcorrect2/releases/tag/v0.32.0
 [0.31.0]: https://github.com/sfilges/umierrorcorrect2/releases/tag/v0.31.0
 [0.30.4]: https://github.com/sfilges/umierrorcorrect2/releases/tag/v0.30.4
