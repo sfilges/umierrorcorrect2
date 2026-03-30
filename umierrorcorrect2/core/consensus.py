@@ -718,6 +718,8 @@ def get_cons_dict(
     with pysam.AlignmentFile(bamfilename, "rb") as f:
         alignment = f.fetch(contig, start, end)
         for read in alignment:
+            if read.is_unmapped:
+                continue
             # Use rsplit with maxsplit=1 - more efficient than split(":")[-1]
             barcode = read.qname.rsplit(":", 1)[-1]  # type: ignore
             pos = read.reference_start

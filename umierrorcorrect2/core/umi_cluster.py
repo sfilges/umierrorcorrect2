@@ -72,10 +72,13 @@ if _HAS_NUMBA:
         return _hamming_numba_core(a.encode(), b.encode())
 
     hamming_distance = _hamming_numba
-    _HAMMING_MSG = "Using Numba-accelerated Hamming distance."
+    _HAMMING_IMPL = "numba"
 else:
     hamming_distance = _hamming_native
-    _HAMMING_MSG = "Using native Python Hamming distance."
+    _HAMMING_IMPL = "native"
+
+# Track whether we've logged the hamming implementation (once per process)
+_hamming_logged = False
 
 # ----------------------------------------------
 # UMI clustering functions
@@ -159,7 +162,10 @@ def get_adj_matrix_from_substring(
 
 def cluster_barcodes(barcodedict: dict[str, int], edit_distance_threshold: int) -> dict[str, list[str]]:
     """Cluster barcodes by edit distance."""
-    logger.debug(_HAMMING_MSG)
+    global _hamming_logged
+    if not _hamming_logged:
+        logger.debug(f"Using {_HAMMING_IMPL} Hamming distance implementation")
+        _hamming_logged = True
     edit_distance_threshold = int(edit_distance_threshold)
     adj_matrix: dict[str, list[str]] = {}
     if len(barcodedict) > SUBSTRING_OPTIMIZATION_THRESHOLD:

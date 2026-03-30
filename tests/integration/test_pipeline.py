@@ -1,4 +1,6 @@
 import subprocess
+import sys
+from pathlib import Path
 
 import pytest
 
@@ -27,8 +29,9 @@ def test_pipeline_end_to_end(temp_output_dir, test_data_dir):
     # We use the CLI entry point 'umierrorcorrect2' assuming it's installed in the environment
     # or accessible via 'python -m umierrorcorrect'
 
+    executable = Path(sys.executable).parent / "umierrorcorrect2"
     cmd = [
-        "umierrorcorrect2",
+        str(executable),
         "run",
         "-r1",
         str(r1),

@@ -70,7 +70,9 @@ The pipeline consists of the following sequential steps:
 4. **Consensus Generation**:
     - Collapses reads in each UMI cluster into a single consensus sequence.
     - Calculates consensus quality scores.
-5. **Variant Calling**:
+5. **Downsampling Analysis**:
+    - Generates saturation plots and statistics to assess sequencing depth and UMI family coverage by subsampling consensus reads.
+6. **Variant Calling**:
     - Detects variants in the error-corrected consensus reads.
 
 ---
@@ -175,6 +177,8 @@ results/
 ├── sample_name/            # Per-sample results
 │   ├── sample_name.bam                  # Raw aligned reads
 │   ├── sample_name_consensus_reads.bam  # Error-corrected consensus reads
+│   ├── sample_name_downsampled_coverage.txt # Downsampling saturation stats
+│   ├── sample_name_downsampled_plot.png # Downsampling saturation plot
 │   ├── sample_name.cons                 # Consensus statistics (TSV)
 │   ├── sample_name.vcf                  # Called variants
 │   ├── sample_name_umi_stats.txt        # UMI Grouping statistics

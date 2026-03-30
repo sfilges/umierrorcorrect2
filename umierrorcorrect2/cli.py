@@ -6,6 +6,8 @@ from typing import Annotated, Optional
 
 import typer
 from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
 from rich.text import Text
 
 from umierrorcorrect2.core.constants import ASCII_ART, DEFAULT_FAMILY_SIZES_STR
@@ -356,6 +358,75 @@ def downsampling(
     logger.info("Downsampling analysis complete!")
 
 
+@app.command()
+def analysis(
+    sample_sheet: Annotated[
+        Path,
+        typer.Option("--sample-sheet", "-s", help="Extended sample sheet CSV for analysis metadata."),
+    ],
+    results_dir: Annotated[
+        Path,
+        typer.Option("--results-dir", "-r", help="Directory containing umierrorcorrect2 output samples/."),
+    ],
+    output_dir: Annotated[
+        Optional[Path],
+        typer.Option("-o", "--output-dir", help="Output directory for analysis reports."),
+    ] = None,
+    family_size: Annotated[
+        int,
+        typer.Option("-f", "--family-size", help="Family size threshold for analysis."),
+    ] = 3,
+) -> None:
+    """Run extended analysis on umierrorcorrect2 results.
+
+    Performs mutation tracking, on-target calculation, and generates
+    HTML reports for samples in the provided extended sample sheet.
+
+    Examples:
+        umierrorcorrect2 analysis -s samples_extended.csv -r results/samples/ -o reports/
+    """
+    from umierrorcorrect2.analysis import AnalysisSampleSheet, Analyzer, HTMLReporter
+
+    # Set up file logging
+    out_path = output_dir or results_dir / "analysis_reports"
+    out_path.mkdir(parents=True, exist_ok=True)
+    log_path = get_log_path(out_path)
+    add_file_handler(log_path)
+    logger.info(f"Logging analysis to {log_path}")
+
+    try:
+        with console.status("[cyan]Parsing extended sample sheet..."):
+            sheet = AnalysisSampleSheet(csv_path=sample_sheet, base_path=sample_sheet.parent)
+        console.print(f"[green]✓[/green] Loaded {len(sheet.samples)} samples for analysis")
+
+        analyzer = Analyzer(family_size=family_size)
+        reporter = HTMLReporter(output_dir=out_path)
+
+        for sample in sheet.samples:
+            # Each sample's core results should be in results_dir/sample_name
+            sample_res_dir = results_dir / sample.name
+            if not sample_res_dir.exists():
+                console.print(
+                    f"[yellow]Warning:[/yellow] Results directory not found for {sample.name}: {sample_res_dir}"
+                )
+                continue
+
+            with console.status(f"[cyan]Analyzing {sample.name}..."):
+                analyzer.analyze_sample(sample, sample_res_dir)
+
+                report_file = out_path / f"{sample.name}_report.html"
+                reporter.generate_report(sample, family_size, report_file)
+
+            console.print(f"  [green]✓[/green] Analysis report: {report_file}")
+
+        console.print(f"\n[bold green]Analysis complete![/bold green] Reports saved to {out_path}")
+
+    except Exception as e:
+        console.print(f"[red]Analysis failed:[/red] {e}")
+        logger.exception("Analysis failed")
+        raise typer.Exit(1) from e
+
+
 @app.command(name="fit-model")
 def fit_model(
     cons_file: Annotated[Path, typer.Option("--cons", help="Path to cons.tsv file.")],
@@ -386,6 +457,156 @@ def fit_model(
 
 
 @app.command()
+def aggregate(
+    results_dir: Annotated[
+        Path,
+        typer.Option("-r", "--results-dir", help="Directory containing sample subdirectories with pipeline outputs."),
+    ],
+    output_dir: Annotated[
+        Optional[Path],
+        typer.Option("-o", "--output-dir", help="Output directory (default: results_dir/aggregate/)."),
+    ] = None,
+    family_size: Annotated[
+        int,
+        typer.Option("-f", "--family-size", help="Consensus group size threshold to filter on."),
+    ] = 3,
+    regions_bed: Annotated[
+        Optional[Path],
+        typer.Option("-rb", "--regions-bed", help="Region BED file for re-annotating the 'Name' column."),
+    ] = None,
+    mutation_bed: Annotated[
+        Optional[Path],
+        typer.Option("-mb", "--mutation-bed", help="Mutation BED file to add is_mutation/alt_matches columns."),
+    ] = None,
+) -> None:
+    """Aggregate consensus TSV files from multiple sample directories into a single table.
+
+    Loads all *_cons.tsv files from sample subdirectories, filters to the specified
+    consensus group size, and optionally annotates with region or mutation BED files.
+
+    Examples:
+
+        umierrorcorrect2 aggregate -r results/samples/ -o results/aggregate/ -f 3
+
+        umierrorcorrect2 aggregate -r results/samples/ -mb mutations.bed
+    """
+    from umierrorcorrect2.analysis.post_processor import PostProcessor
+
+    out_path = output_dir or results_dir / "aggregate"
+    out_path.mkdir(parents=True, exist_ok=True)
+    log_path = get_log_path(out_path)
+    add_file_handler(log_path)
+
+    try:
+        pp = PostProcessor(results_dir=results_dir, family_size=family_size)
+        with console.status("[cyan]Aggregating consensus data..."):
+            df = pp.aggregate_cons(region_bed=regions_bed, mutation_bed=mutation_bed)
+
+        if df.empty:
+            console.print("[yellow]Warning:[/yellow] No consensus data found.")
+            raise typer.Exit(1)
+
+        out_file = out_path / "combined_cons.tsv"
+        df.to_csv(out_file, sep="\t", index=False)
+        n_samples = df["Sample Name"].nunique() if "Sample Name" in df.columns else "?"
+        console.print(f"[green]✓[/green] Aggregated {n_samples} samples ({len(df)} rows) → {out_file}")
+
+    except typer.Exit:
+        raise
+    except Exception as e:
+        console.print(f"[red]Aggregate failed:[/red] {e}")
+        logger.exception("Aggregate failed")
+        raise typer.Exit(1) from e
+
+
+@app.command()
+def summarize(
+    results_dir: Annotated[
+        Path,
+        typer.Option("-r", "--results-dir", help="Directory containing sample subdirectories with pipeline outputs."),
+    ],
+    output_dir: Annotated[
+        Optional[Path],
+        typer.Option("-o", "--output-dir", help="Output directory (default: results_dir/aggregate/)."),
+    ] = None,
+    family_size: Annotated[
+        int,
+        typer.Option("-f", "--family-size", help="Consensus group size threshold for mutation metrics."),
+    ] = 3,
+    regions_bed: Annotated[
+        Optional[Path],
+        typer.Option("-rb", "--regions-bed", help="Region BED file for on-target read numerator."),
+    ] = None,
+    mutation_bed: Annotated[
+        Optional[Path],
+        typer.Option("-mb", "--mutation-bed", help="Mutation BED file for mutation metrics and on-target numerator."),
+    ] = None,
+    sample_sheet: Annotated[
+        Optional[Path],
+        typer.Option("-s", "--samplesheet", help="Optional extended sample sheet CSV with metadata (ml_plasma etc.)."),
+    ] = None,
+) -> None:
+    """Summarize UMI error correction results across samples.
+
+    Computes on-target read fractions (using fastp.json for total reads) and,
+    if a mutation BED is provided, per-mutation metrics (VAF, ctDNA ppm) across
+    all sample subdirectories.
+
+    Examples:
+
+        umierrorcorrect2 summarize -r results/samples/ -o results/aggregate/
+
+        umierrorcorrect2 summarize -r results/samples/ -mb mutations.bed -s samplesheet.csv
+    """
+    from umierrorcorrect2.analysis.models import AnalysisSampleSheet
+    from umierrorcorrect2.analysis.post_processor import PostProcessor
+
+    out_path = output_dir or results_dir / "aggregate"
+    out_path.mkdir(parents=True, exist_ok=True)
+    log_path = get_log_path(out_path)
+    add_file_handler(log_path)
+
+    try:
+        pp = PostProcessor(results_dir=results_dir, family_size=family_size)
+
+        # Load optional metadata from extended sample sheet
+        ml_plasma_map: dict[str, float] | None = None
+        if sample_sheet is not None:
+            with console.status("[cyan]Parsing sample sheet..."):
+                sheet = AnalysisSampleSheet(csv_path=sample_sheet, base_path=sample_sheet.parent)
+            ml_plasma_map = {s.name: s.ml_plasma for s in sheet.samples if s.ml_plasma is not None} or None
+            console.print(f"[green]✓[/green] Loaded {len(sheet.samples)} samples from sample sheet")
+
+        # On-target fractions (always computed)
+        with console.status("[cyan]Computing on-target fractions..."):
+            on_target_df = pp.compute_on_target_fractions(region_bed=regions_bed, mutation_bed=mutation_bed)
+
+        on_target_file = out_path / "on_target_summary.tsv"
+        on_target_df.to_csv(on_target_file, sep="\t", index=False)
+        console.print(f"[green]✓[/green] On-target summary → {on_target_file}")
+
+        # Mutation metrics (only if mutation_bed provided)
+        if mutation_bed is not None:
+            with console.status("[cyan]Computing mutation metrics..."):
+                cons_df = pp.aggregate_cons(mutation_bed=mutation_bed)
+
+            if not cons_df.empty:
+                metrics_df = pp.compute_mutation_metrics(cons_df, ml_plasma_map=ml_plasma_map)
+                metrics_file = out_path / "mutation_metrics.tsv"
+                metrics_df.to_csv(metrics_file, sep="\t", index=False)
+                console.print(f"[green]✓[/green] Mutation metrics → {metrics_file}")
+            else:
+                console.print("[yellow]Warning:[/yellow] No consensus data found for mutation metrics.")
+
+        console.print(f"\n[bold green]Summarize complete![/bold green] Results saved to {out_path}")
+
+    except Exception as e:
+        console.print(f"[red]Summarize failed:[/red] {e}")
+        logger.exception("Summarize failed")
+        raise typer.Exit(1) from e
+
+
+@app.command()
 def run(
     read1: Annotated[
         Optional[Path], typer.Option("-r1", "--read1", help="Path to first FASTQ file (R1) for single-sample mode.")
@@ -400,15 +621,10 @@ def run(
         Optional[Path],
         typer.Option("--sample-sheet", help="CSV/TSV sample sheet with sample_name,read1,read2 columns."),
     ] = None,
-    reference: Annotated[Path, typer.Option("-r", "--reference", help="Path to reference genome FASTA.")] = ...,
-    output_dir: Annotated[Path, typer.Option("-o", "--output-dir", help="Output directory for all samples.")] = ...,
+    reference: Annotated[Path, typer.Option("-r", "--reference", help="Path to reference genome FASTA.")] = ...,  # type: ignore[assignment]
+    output_dir: Annotated[Path, typer.Option("-o", "--output-dir", help="Output directory for all samples.")] = ...,  # type: ignore[assignment]
     bed_file: Annotated[
         Optional[Path], typer.Option("-rb", "--regions-bed", help="Path to BED file defining targeted regions.")
-    ] = None,
-    # TODO: Mutation bed is currently not used, but will be required for reporting in the future.
-    mut_bed: Annotated[
-        Optional[Path],
-        typer.Option("-mb", "--mutations-bed", help="Path to BED file defining patient-specific mutation positions."),
     ] = None,
     umi_length: Annotated[int, typer.Option("-ul", "--umi-length", help="Length of UMI sequence.")] = 19,
     spacer_length: Annotated[
@@ -522,7 +738,9 @@ def run(
             console.print(f"[red]Error:[/red] Sample sheet not found: {sample_sheet}")
             raise typer.Exit(1)
         try:
-            samples = parse_sample_sheet(sample_sheet)
+            with console.status("[cyan]Parsing sample sheet..."):
+                samples = parse_sample_sheet(sample_sheet)
+            console.print(f"[green]✓[/green] Loaded {len(samples)} sample(s)")
         except ValueError as e:
             console.print(f"[red]Error parsing sample sheet:[/red] {e}")
             raise typer.Exit(1) from None
@@ -531,7 +749,9 @@ def run(
         if input_dir is None or not input_dir.exists():
             console.print(f"[red]Error:[/red] Input directory not found: {input_dir}")
             raise typer.Exit(1)
-        samples = discover_samples(input_dir)
+        with console.status("[cyan]Discovering samples..."):
+            samples = discover_samples(input_dir)
+        console.print(f"[green]✓[/green] Found {len(samples)} sample(s)")
 
     if not samples:
         console.print("[red]Error:[/red] No samples found.")
@@ -557,39 +777,53 @@ def run(
     else:
         mode_str = "Sample Sheet"
 
-    # Print summary
+    # Print banner and configuration
     console.print(Text(ASCII_ART, style="bold green"))
-    console.print(f"  Version: {__version__}")
-    console.print("\n")
-    console.print(f"  Mode: {mode_str}")
-    console.print(f"  Samples: {len(samples)}")
+    console.print(f"[dim]Version {__version__}[/dim]", justify="center")
+    console.print()
+
+    # Build configuration table
+    config_table = Table(show_header=False, box=None, padding=(0, 2))
+    config_table.add_column("Key", style="dim")
+    config_table.add_column("Value")
+
+    config_table.add_row("Mode", mode_str)
+    config_table.add_row("Samples", str(len(samples)))
 
     if mode_str == "Single Sample":
-        console.print(f"  Read1: {read1}")
-        console.print(f"  Read2: {read2}")
+        config_table.add_row("Read1", str(read1))
+        if read2:
+            config_table.add_row("Read2", str(read2))
     elif mode_str == "Directory":
-        console.print(f"  Input directory: {input_dir}")
+        config_table.add_row("Input", str(input_dir))
     else:
-        console.print(f"  Sample sheet: {sample_sheet}")
+        config_table.add_row("Sample sheet", str(sample_sheet))
 
-    console.print(f"  Reference: {reference}")
-    console.print(f"  Output: {output_dir}")
+    config_table.add_row("Reference", str(reference))
+    config_table.add_row("Output", str(output_dir))
+
     if len(samples) > 1:
-        console.print(f"  Threads: {threads} ({samples_parallel} samples in parallel)")
+        config_table.add_row("Threads", f"{threads} ({samples_parallel} parallel)")
     else:
-        console.print(f"  Threads: {threads}")
+        config_table.add_row("Threads", str(threads))
+
+    # Build features list
+    features = []
     if fastp:
-        console.print("  Preprocessing: fastp")
+        features.append("fastp")
     if fastp_merge_reads and fastp:
-        console.print("  Merge reads: enabled")
-    if adapter_trimming and fastp:
-        console.print("  Adapter trimming: fastp")
-    if adapter_trimming and not fastp:
-        console.print("  Adapter trimming: cutadapt")
+        features.append("merge reads")
+    if adapter_trimming:
+        features.append(f"trim adapters ({'fastp' if fastp else 'cutadapt'})")
     if qc:
-        console.print("  QC reports: enabled")
-    console.print(f"  UMI length: {umi_length}")
-    console.print(f"  Spacer length: {spacer_length}")
+        features.append("QC reports")
+    if features:
+        config_table.add_row("Features", ", ".join(features))
+
+    config_table.add_row("UMI length", str(umi_length))
+    config_table.add_row("Spacer length", str(spacer_length))
+
+    console.print(Panel(config_table, title="[bold]Configuration[/bold]", border_style="blue"))
     console.print()
 
     logger.info(f"Starting processing of {len(samples)} sample(s)")
